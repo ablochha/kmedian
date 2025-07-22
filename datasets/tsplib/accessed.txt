@@ -1,0 +1,8 @@
+This dataset comes from http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/
+and was accessed on March 17th, 2022
+
+The original author is Gerhard Reinelt.
+
+The dataset contains a collection of TSP test instances that can be modified for the facility location problem.
+
+See tsp95.pdf for information from the author.

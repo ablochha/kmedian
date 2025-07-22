@@ -1,0 +1,17 @@
+This dataset comes from https://people.math.sc.edu/Burkardt/datasets/cities/cities.html
+and was accessed on June 1st, 2021.
+
+The original author is John Burkardt.
+
+The dataset is described on the website as:
+"
+ USCA312 describes 312 cities in the US and Canada. Distances between the city are computed from latitude and longitude, not from road mileage.
+
+    usca312_main.txt, is the main file.
+    usca312_dist.txt, is the city-to-city distance, in miles, computed from the latitude/longitude data and rounded to integers.
+    usca312_dms.txt, the latitude and longitude of each city.
+    usca312_name.txt, the name of each city.
+    usca312_xy.txt, the XY coordinates of the cities.
+    usca312_xy.png, a PNG image of the XY coordinates of the cities.
+
+"

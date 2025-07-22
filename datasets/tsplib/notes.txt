@@ -1,0 +1,4 @@
+The TSPLib contains many problems. The following selections are based on the paper
+Solving Large p-Median Problems with a Radius Formulation by Garcia et al (2011).
+
+They provide several large examples as well as the optimum value for several problem instances.
