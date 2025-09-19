@@ -1,12 +1,9 @@
 import random
 import numpy as np
 import torch
+import time
 
 from solvers.brute_solver import calculate_distance
-
-# Constants for update type.
-FACILITY = 1
-CLIENT = 0
 
 class HopfieldExhaustive:
     def __init__(self, n, k, graph, use_gpu):
@@ -38,12 +35,6 @@ class HopfieldExhaustive:
         else:
             #self._full_distance_values = torch.tensor(1 - graph._normalized_distances)
             self._full_distance_values = (1 - graph._normalized_distances).clone().detach()
-        """
-        if self.verbose is True:
-            print("These are the initial (normalized) distance values")
-            print(self._full_distance_values)
-            print()
-        """
               
         self._distance_values = self._full_distance_values
         
@@ -66,182 +57,60 @@ class HopfieldExhaustive:
         self._sorted_facility_inner_values = None
         self._sorted_facility_indices = None
         
-        self.maxTime = 1000000
+        self.start_time = time.time()
+        #self.maxTime = 1000000
+        #self.maxTime = 200
         
+        """
         if n > 6000 and k > 2000:
-            self.maxTime = 200
+            self.maxTime = 100
         elif n > 6000 and k <= 2000:
             self.maxTime = 100
         elif n < 1000:
-            self.maxTime = 5
+            self.maxTime = 0.2
         elif n > 1000 and k < 1000:
             self.maxTime = 10
-        elif n > 1000 and k >= 1000:
-            self.maxTime = 15
+        elif n < 6000:
+            self.maxTime = 10
         else:
             self.maxTime = 15
+        """
+        if n < 1000:
+            self.maxTime = 0.2
+        elif n > 1000 and n < 1500:
+            self.maxTime = 1
+        elif n > 1000 and n < 3000:
+            self.maxTime = 2
+        elif n > 1000 and n < 5000:
+            self.maxTime = 3
+        elif n > 1000 and n < 6000: 
+            self.maxTime = 20
+        elif n > 1000 and n < 15000 and k < 1000:
+            self.maxTime = 50
+        elif n > 1000 and n < 15000 and k == 1000:
+            self.maxTime = 75
+        elif n > 1000 and n < 15000 and k == 2000:
+            self.maxTime = 100
+        elif n > 1000 and n < 15000 and k > 2000:
+            self.maxTime = 200
 
     def run(self, runs, starter_facilities=None):
-                   
+        
         best_facilities = starter_facilities
         best_distance = calculate_distance(self._graph, best_facilities, self._n) if starter_facilities else None
-
-        completed = 0
-        import time
-        start_time = time.time()
-        max_time = 235
-        
-        for r in range(runs):
-        
-            #current_time = time.time()
-            
-            #if current_time - start_time >= max_time:
-            #if current_time - start_time >= 5:
-            #    break
+        self.start_time = time.time()
                 
-            # Initialize our per run variables.
+        for r in range(runs):
             self._initialize_per_run_arrays(r, runs)
-            
             facility_stabilized = False
-            #counter = 0
-            
             while not facility_stabilized:
                 current_time = time.time()
-                if current_time - start_time >= self.maxTime:
-                    break
-                    
-                max_values, max_indices = torch.max(self._facility_inner_values, dim=1)
-                sumBefore = torch.sum(max_values).item()
-                bestSolution = sumBefore
-                self._sorted_facility_inner_values, self._sorted_facility_indices = torch.sort(max_values)
-                
-                self._facility_inner_values_copy = self._facility_inner_values.detach().clone()
-                self._client_inner_values_copy = self._client_inner_values.detach().clone()
-                self._facility_activation_values_copy = self._facility_activation_values.detach().clone()
-                self._client_activation_values_copy = self._client_activation_values.detach().clone()
-                
-                for innerLoop in range(0, self._k):
-                    current_time = time.time()
-                    if current_time - start_time >= self.maxTime:
-                        break
-                #for innerLoop in range(0, 3):
-                    
-                    #counter = counter + 1
-                    #print("InnerLoop:", innerLoop)
-                
-                    # Determine which of the facilities has the lowest inner value and deactivate it
-                    worstFacility = self._sorted_facility_indices[self._n - self._k + innerLoop]
-                    
-                    self._facility_activation_values[worstFacility, max_indices[worstFacility]] = 0
-                    self._facilities[0,worstFacility] = 0 #This variable is useful in some matrix computations, and it tracks active facilities in a 1D array
-                    
-                    #Set all the client inner values corresponding to the worst facility to 0
-                    #This is needed in order to find an accurate value for which clients are assigned to the k-1 remaining active facilities
-                    self._client_inner_values_copy[:, max_indices[worstFacility]] = 0
-                
-                    #Calculate the value for each client being served by their closest k-1 remaining active facility
-                    client_max_values, client_max_indices = torch.max(self._client_inner_values_copy, dim=1)
-                    
-                    facility_values = torch.reshape(self._facilities, (self._n, 1))
-                    facility_values = (facility_values - 1) * -1
-                    self._candidatefacility_inner_values = facility_values * self._distance_values
-                    facility_values = torch.reshape(facility_values, (1, self._n))
-                    self._candidatefacility_inner_values = facility_values * self._candidatefacility_inner_values 
-                    self._candidatefacility_inner_values = torch.where(self._candidatefacility_inner_values > client_max_values, self._candidatefacility_inner_values - client_max_values, 0)  
-                    
-                    # Now we need to take the sum of each row from candidate inner value, and put it in correct spot for facility inner value
-                    # max_indices[worstFacility] represents the cluster where we deactivated a facility
-                    self._facility_inner_values_copy[:, max_indices[worstFacility]] = torch.sum(self._candidatefacility_inner_values, dim=1)
-                    
-                    # Sort the facilities again
-                    bestFacility = torch.argmax(self._facility_inner_values_copy[:, max_indices[worstFacility]])    
-                    self._active_facility_list[max_indices[worstFacility]] = bestFacility              
-                    self._facility_activation_values_copy[bestFacility, max_indices[worstFacility]] = 1
+                if current_time - self.start_time >= self.maxTime:
+                    break  
+                self.ARN()
+                facility_stabilized = self.MARN()
 
-                    self._calculate_client_values_copy()
-                    self._update_client_copy()
-                    self._calculate_facility_values_copy()
-                    
-                    max_values_after, max_indices_after = torch.max(self._facility_inner_values_copy, dim=1)
-                    sumAfter = torch.sum(max_values_after).item()
-                    self._facilities[0,bestFacility] = 1                  
-                        
-                    #Regardless of whether we found a best solution or not, revert to the starting point
-                    self._facility_activation_values_copy[bestFacility,max_indices[worstFacility]] = 0
-                    self._facility_activation_values_copy[worstFacility,max_indices[worstFacility]] = 1
-                    self._facilities[0,bestFacility] = 0
-                    self._facilities[0,worstFacility] = 1
-                    self._active_facility_list[max_indices[worstFacility]] = worstFacility
-                    self._client_inner_values_copy[max_indices[worstFacility]] = self._client_inner_values[max_indices[worstFacility]]
-                    
-                    #if sumAfter > (1 + (1 / self._n)) * bestSolution:
-                    #if sumAfter > (bestSolution * 1.00001):
-                    #if sumAfter > (bestSolution * 1.01):
-                    if sumAfter > bestSolution:
-                        #print("sumAfter: ",sumAfter)
-                        #print("bestSolution: ",bestSolution)
-                        #print("Improvement: ",sumAfter-bestSolution)
-                        bestSolution = sumAfter
-                        bestSolutionFacilityToActivate = bestFacility
-                        bestSolutionFacilityToDeactivate = worstFacility
-                        break
-                    
-                #If we found an improvement, apply it
-                if bestSolution > sumBefore:
-                    self._facility_activation_values[bestSolutionFacilityToActivate,max_indices[bestSolutionFacilityToDeactivate]] = 1
-                    self._facility_activation_values[bestSolutionFacilityToDeactivate,max_indices[bestSolutionFacilityToDeactivate]] = 0
-                    self._facilities[0,bestSolutionFacilityToActivate] = 1
-                    self._facilities[0,bestSolutionFacilityToDeactivate] = 0
-                    self._active_facility_list[max_indices[bestSolutionFacilityToDeactivate]] = bestSolutionFacilityToActivate
-                    self._calculate_client_values()
-                    self._update_client()
-                    self._calculate_facility_values()
-                else:
-                    facility_stabilized = True      
-                        
-                    """
-                    if self.verbose is True:
-                        print("Stabilized")
-                    """
-                    
-            #print("Number of iterations of the main loop: ", counter)
-            selected_facilities, selected_distance = self._calculate_facilities_and_distance()
-            
-            """
-            if self.verbose is True:
-                print("Current distance", selected_distance)
-                print("Best distance", best_distance)
-                print()
-            """
-
-            # update our best value
-            if best_distance is None or selected_distance < best_distance:
-            
-                if best_distance is None:
-                
-                    pass
-                    
-                else:
-                
-                    new_ratio = round(best_distance / selected_distance, 3)
-                    #print(f"{r}: {selected_distance} - {new_ratio}")
-                    
-                best_distance = selected_distance
-                best_facilities = selected_facilities
-                
-                """
-                if self.verbose is True:
-                    print("These are the activation values")
-                    print(self._activation_values)
-                    print()   
-                """
-
-            completed += 1
-
-        #import sys
-        #sys.exit(0)
-        #print(completed)
-        return best_facilities
+        return self._active_facility_list 
 
     def _initialize_per_run_arrays(self, r, runs):
     
@@ -287,6 +156,107 @@ class HopfieldExhaustive:
         self._calculate_client_values()
         self._update_client()
         self._calculate_facility_values()
+        
+    def ARN(self):
+        
+        facility_stabilized = False
+        while not facility_stabilized:
+            current_time = time.time()
+            if current_time - self.start_time >= self.maxTime:
+                return
+            max_values, max_indices = torch.max(self._facility_inner_values, dim=1)
+            sumBefore = torch.sum(max_values).item() 
+            self._sorted_facility_inner_values, self._sorted_facility_indices = torch.torch.topk(max_values, self._k)
+            worstFacility = self._sorted_facility_indices[self._k - 1]
+            self._facility_activation_values[worstFacility, max_indices[worstFacility]] = 0
+            self._facilities[0,worstFacility] = 0        
+            self._client_inner_values[:, max_indices[worstFacility]] = 0
+            client_max_values, client_max_indices = torch.max(self._client_inner_values, dim=1)
+            facility_values = torch.reshape(self._facilities, (self._n, 1))
+            facility_values = (facility_values - 1) * -1
+            self._candidatefacility_inner_values = facility_values * self._distance_values
+            facility_values = torch.reshape(facility_values, (1, self._n))
+            self._candidatefacility_inner_values = facility_values * self._candidatefacility_inner_values
+            self._candidatefacility_inner_values = (self._candidatefacility_inner_values - client_max_values).clamp_min_(0) 
+            self._facility_inner_values[:, max_indices[worstFacility]] = torch.sum(self._candidatefacility_inner_values, dim=1)       
+            bestFacility = torch.argmax(self._facility_inner_values[:, max_indices[worstFacility]])
+            self._active_facility_list[max_indices[worstFacility]] = bestFacility.item()         
+            self._facility_activation_values[bestFacility, max_indices[worstFacility]] = 1
+            self._calculate_client_values()
+            self._update_client()
+            self._calculate_facility_values()
+            max_values_after, max_indices_after = torch.max(self._facility_inner_values, dim=1)
+            sumAfter = torch.sum(max_values_after).item()
+            self._facilities[0,bestFacility] = 1
+            if sumBefore >= sumAfter:
+                facility_stabilized = True
+                self._facility_activation_values[bestFacility.item(),max_indices[worstFacility]] = 0
+                self._facility_activation_values[worstFacility.item(),max_indices[worstFacility]] = 1
+                self._facilities[0,bestFacility] = 0
+                self._facilities[0,worstFacility] = 1
+                self._active_facility_list[max_indices[worstFacility]] = worstFacility.item()
+        #current_time = time.time()
+        #print("ARN COMPLETE. Energy: ",max(sumBefore,sumAfter)," Time: ",current_time - self.start_time)
+        return
+
+    def MARN(self):
+        
+        max_values, max_indices = torch.max(self._facility_inner_values, dim=1)
+        sumBefore = torch.sum(max_values).item()
+        bestSolution = sumBefore
+        self._sorted_facility_inner_values, self._sorted_facility_indices = torch.topk(max_values, self._k)
+        self._facility_inner_values_copy = self._facility_inner_values.detach().clone()
+        self._client_inner_values_copy = self._client_inner_values.detach().clone()
+        self._facility_activation_values_copy = self._facility_activation_values.detach().clone()
+        self._client_activation_values_copy = self._client_activation_values.detach().clone()
+        for innerLoop in range(1, self._k):
+            current_time = time.time()
+            if current_time - self.start_time >= self.maxTime:
+                return True
+            worstFacility = self._sorted_facility_indices[self._k - 1 - innerLoop]     
+            self._facility_activation_values[worstFacility, max_indices[worstFacility]] = 0
+            self._facilities[0,worstFacility] = 0
+            self._client_inner_values_copy[:, max_indices[worstFacility]] = 0
+            client_max_values, client_max_indices = torch.max(self._client_inner_values_copy, dim=1)
+            facility_values = torch.reshape(self._facilities, (self._n, 1))
+            facility_values = (facility_values - 1) * -1
+            self._candidatefacility_inner_values = facility_values * self._distance_values
+            facility_values = torch.reshape(facility_values, (1, self._n))
+            self._candidatefacility_inner_values = facility_values * self._candidatefacility_inner_values 
+            self._candidatefacility_inner_values = (self._candidatefacility_inner_values - client_max_values).clamp_min_(0)
+            self._facility_inner_values_copy[:, max_indices[worstFacility]] = torch.sum(self._candidatefacility_inner_values, dim=1)
+            bestFacility = torch.argmax(self._facility_inner_values_copy[:, max_indices[worstFacility]])    
+            self._active_facility_list[max_indices[worstFacility]] = bestFacility.item()             
+            self._facility_activation_values_copy[bestFacility, max_indices[worstFacility]] = 1
+            self._calculate_client_values_copy()
+            self._update_client_copy()
+            self._calculate_facility_values_copy()
+            max_values_after, max_indices_after = torch.max(self._facility_inner_values_copy, dim=1)
+            sumAfter = torch.sum(max_values_after).item()
+            self._facilities[0,bestFacility] = 1         
+            self._facility_activation_values_copy[bestFacility,max_indices[worstFacility]] = 0
+            self._facility_activation_values_copy[worstFacility,max_indices[worstFacility]] = 1
+            self._facilities[0,bestFacility] = 0
+            self._facilities[0,worstFacility] = 1
+            self._active_facility_list[max_indices[worstFacility]] = worstFacility.item()
+            #self._client_inner_values_copy[:,max_indices[worstFacility]] = self._client_inner_values[max_indices[worstFacility]]
+            if sumAfter > bestSolution:
+                bestSolution = sumAfter
+                bestSolutionFacilityToActivate = bestFacility.item()
+                bestSolutionFacilityToDeactivate = worstFacility.item()
+                break
+        if bestSolution > sumBefore:
+            self._facility_activation_values[bestSolutionFacilityToActivate,max_indices[bestSolutionFacilityToDeactivate]] = 1
+            self._facility_activation_values[bestSolutionFacilityToDeactivate,max_indices[bestSolutionFacilityToDeactivate]] = 0
+            self._facilities[0,bestSolutionFacilityToActivate] = 1
+            self._facilities[0,bestSolutionFacilityToDeactivate] = 0
+            self._active_facility_list[max_indices[bestSolutionFacilityToDeactivate]] = bestSolutionFacilityToActivate
+            self._calculate_client_values()
+            self._update_client()
+            self._calculate_facility_values()
+            return False
+        else:
+            return True
 
     def _calculate_facilities_and_distance(self):
     
