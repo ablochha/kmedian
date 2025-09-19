@@ -36,14 +36,7 @@ class HopfieldOriginal:
         if self._use_gpu:
             self._full_distance_values = 1 - graph._gpu_normalized_distances
         else:
-            #self._full_distance_values = torch.tensor(1 - graph._normalized_distances)
             self._full_distance_values = (1 - graph._normalized_distances).clone().detach()
-        """
-        if self.verbose is True:
-            print("These are the initial (normalized) distance values")
-            print(self._full_distance_values)
-            print()
-        """
               
         self._distance_values = self._full_distance_values
         
@@ -65,6 +58,10 @@ class HopfieldOriginal:
         # Caching the sorted list of a facility inner values in order to decrease the number of sort calls
         self._sorted_facility_inner_values = None
         self._sorted_facility_indices = None
+        
+        #self.facility_col = torch.zeros(self._n, device=self._device)
+        #self.D_cols = torch.zeros((self._n, self._n - k + 1), device=self._device)
+        #self.D_rr = torch.zeros((self._n - k + 1, self._n - k + 1), device=self._device)
 
     def run(self, runs, starter_facilities=None):
                    
@@ -85,238 +82,98 @@ class HopfieldOriginal:
                 
             # Initialize our per run variables.
             self._initialize_per_run_arrays(r, runs)
-            
             facility_stabilized = False
-            #counter = 0
             
             while not facility_stabilized:
-                    
+                
                 max_values, max_indices = torch.max(self._facility_inner_values, dim=1)
-                sumBefore = torch.sum(max_values).item()
-                #counter = counter + 1
-                
-                """
-                if self.verbose is True:
-                    print("Here is the sum of facility inner values before deactivation")
-                    print(sumBefore)
-                    print()
-                
-                    print("These are the facility activation values")
-                    print(self._facility_activation_values)
-                    print()
-                    print("These are the client activation values")
-                    print(self._client_activation_values)
-                    print()
-                """
+                sumBefore = torch.sum(max_values).item()                
             
                 # Determine which of the facilities has the lowest inner value and deactivate it
-                self._sorted_facility_inner_values, self._sorted_facility_indices = torch.sort(max_values)
-                worstFacility = self._sorted_facility_indices[self._n - self._k]
+                #self._sorted_facility_inner_values, self._sorted_facility_indices = torch.sort(max_values)
+                #worstFacility = self._sorted_facility_indices[self._n - self._k]
+                self._sorted_facility_inner_values, self._sorted_facility_indices = torch.topk(max_values, self._k)
+                worstFacility = self._sorted_facility_indices[self._k-1]
                 
                 self._facility_activation_values[worstFacility, max_indices[worstFacility]] = 0
-                self._facilities[0,worstFacility] = 0 #This variable is useful in some matrix computations, and it tracks active facilities in a 1D array
-                
-                """
-                if self.verbose is True:
-                    print("Beginning of the loop")
-                    print("Here is the list of sorted facility inner values")
-                    print(self._sorted_facility_inner_values)
-                    print()
-                
-                    print("Here is the list of sorted facility indices")
-                    print(self._sorted_facility_indices)
-                    print()
-                
-                    print("The active facility with the worst inner value is: ", worstFacility.item())
-                    print()
-                """
+                self._facilities[0,worstFacility] = 0 #This variable is useful in some matrix computations, and it tracks active facilities in a 1D array               
                 
                 #Set all the client inner values corresponding to the worst facility to 0
                 #This is needed in order to find an accurate value for which clients are assigned to the k-1 remaining active facilities
                 self._client_inner_values[:, max_indices[worstFacility]] = 0
-                
-                """
-                if self.verbose is True:
-                    print("These are the client inner values after deactivating the worst facility")
-                    print(self._client_inner_values)
-                    print()
-                """
             
                 #Calculate the value for each client being served by their closest k-1 remaining active facility
-                client_max_values, client_max_indices = torch.max(self._client_inner_values, dim=1)
-                
-                """
-                if self.verbose is True:
-                    print("These are the max values in each column")
-                    print(client_max_values)
-                    print()
-                """
-
+                client_max_values, client_max_indices = torch.max(self._client_inner_values, dim=1)    
+                #"""                
                 facility_values = torch.reshape(self._facilities, (self._n, 1))
                 facility_values = (facility_values - 1) * -1
-                
-                """
-                if self.verbose is True:
-                    print("Facility values")
-                    print(facility_values)
-                """
-                
                 self._candidatefacility_inner_values = facility_values * self._distance_values
-                
-                """
-                if self.verbose is True:
-                    print("These are the candidate facility inner values with remaining facility rows zeroed out")
-                    print(self._candidatefacility_inner_values)
-                    print()
-                """
-                
                 facility_values = torch.reshape(facility_values, (1, self._n))
+                self._candidatefacility_inner_values = facility_values * self._candidatefacility_inner_values          
+                
+                #self._candidatefacility_inner_values = torch.where(self._candidatefacility_inner_values > client_max_values, self._candidatefacility_inner_values - client_max_values, 0) 
+                self._candidatefacility_inner_values = (self._candidatefacility_inner_values - client_max_values).clamp_min_(0) # This is faster
+                #"""
                 
                 """
-                if self.verbose is True:
-                    print("Facility values")
-                    print(facility_values)
+                # Is this faster?
+                inactive_mask = (self._facilities == 0).view(-1)                                    # shape (n,)
+                inactive_idx = torch.nonzero(inactive_mask, as_tuple=True)[0]                       # (n-k,)
+                D_cols = self._distance_values.index_select(dim=1, index=inactive_idx)
+                D_rr = D_cols.index_select(dim=0, index=inactive_idx)                          # reduced (n-k) x (n-k)
+                client_max_reduced = client_max_values.index_select(0, inactive_idx).unsqueeze(0)   # (n-k) x 1
+                C = (D_rr - client_max_reduced).clamp_min_(0)                                       # (n-k) x (n-k)
+                s_reduced = torch.sum(C, dim=1)   
+                self.facility_col.zero_()
+                self.facility_col.index_copy_(0, inactive_idx, s_reduced)                                # (n-k,)
                 """
-                
-                self._candidatefacility_inner_values = facility_values * self._candidatefacility_inner_values 
-                
-                """
-                if self.verbose is True:
-                    print("These are the candidate facility inner values with remaining facility columns zeroed out")
-                    print(self._candidatefacility_inner_values)
-                    print()
-                """
-                 
-#                self._candidatefacility_inner_values = torch.where(self._candidatefacility_inner_values > client_max_values, self._candidatefacility_inner_values + (self._candidatefacility_inner_values - client_max_values), 0) 
-                self._candidatefacility_inner_values = torch.where(self._candidatefacility_inner_values > client_max_values, self._candidatefacility_inner_values - client_max_values, 0) 
-                 
-                """
-                if self.verbose is True:
-                    print("These are the candidate facility inner values that have been adjusted based on which clients they can actually serve")
-                    print(self._candidatefacility_inner_values)
-                    print()
-                """
-                
+
                 # Now we need to take the sum of each row from candidate inner value, and put it in correct spot for facility inner value
-                # max_indices[worstFacility] represents the cluster where we deactivated a facility
+                # max_indices[worstFacility] is the cluster we’re updating
                 self._facility_inner_values[:, max_indices[worstFacility]] = torch.sum(self._candidatefacility_inner_values, dim=1)
-                
-                """
-                if self.verbose is True:
-                    print("Updated candidate facility inner values")
-                    print(self._facility_inner_values)
-                    print()
-                """
                 
                 # Sort the facilities again
                 bestFacility = torch.argmax(self._facility_inner_values[:, max_indices[worstFacility]])    
-                self._active_facility_list[max_indices[worstFacility]] = bestFacility              
+                #best_local = torch.argmax(s_reduced)         # index in [0 .. (n-k)-1]
+                #bestFacility = inactive_idx[best_local].item()
+                self._active_facility_list[max_indices[worstFacility]] = bestFacility.item()            
                 self._facility_activation_values[bestFacility, max_indices[worstFacility]] = 1
-                
-                """
-                if self.verbose is True:
-                    print("Comparing worstFacility to bestFacility")
-                    print("worstFacility", worstFacility.item())
-                    print("bestFacility", bestFacility.item())
-                    print()
-                """
-                
+    
                 self._calculate_client_values()
-                
-                """
-                if self.verbose is True:
-                    print("These are the client inner values")
-                    print(self._client_inner_values)
-                    print()
-                """
-                
                 self._update_client()
-                
-                """
-                if self.verbose is True:
-                    print("These are the client activation values")
-                    print(self._client_activation_values)
-                    print()
-                """
-                
-                #self._facility_inner_values[:,max_indices[worstFacility]] = torch.zeros(size=(self._n, 1), device=self._device)[:,0]
-                #print("These are the facility inner values")
-                #print(self._facility_inner_values)
-                #print()
                 self._calculate_facility_values()
-                #print("These are the facility inner values")
-                #print(self._facility_inner_values)
-                #print()
-                """
-                if self.verbose is True:
-                    print("These are the facility inner values")
-                    print(self._facility_inner_values)
-                    print()
-                """
                 
                 max_values_after, max_indices_after = torch.max(self._facility_inner_values, dim=1)
                 sumAfter = torch.sum(max_values_after).item()
                 self._facilities[0,bestFacility] = 1
                 
-                """
-                if self.verbose is True:
-                    print("Here is the sum of facility inner values")
-                    print("Beginning of loop", sumBefore)
-                    print("End of loop", sumAfter)
-                    print()
-                """
-                
                 if sumBefore >= sumAfter:
                     facility_stabilized = True
                     self._facility_activation_values[bestFacility.item(),max_indices[worstFacility]] = 0
+                    #self._facility_activation_values[bestFacility,max_indices[worstFacility]] = 0
                     self._facility_activation_values[worstFacility.item(),max_indices[worstFacility]] = 1
                     self._facilities[0,bestFacility] = 0
                     self._facilities[0,worstFacility] = 1
-                    self._active_facility_list[max_indices[worstFacility]] = worstFacility        
+                    self._active_facility_list[max_indices[worstFacility]] = worstFacility.item()        
                     
-                    """
-                    if self.verbose is True:
-                        print("Stabilized")
-                    """
-                    
-            #print("Number of iterations of the main loop: ", counter)
-            selected_facilities, selected_distance = self._calculate_facilities_and_distance()
-            
-            """
-            if self.verbose is True:
-                print("Current distance", selected_distance)
-                print("Best distance", best_distance)
-                print()
-            """
+            #selected_facilities, selected_distance = self._calculate_facilities_and_distance()
 
             # update our best value
-            if best_distance is None or selected_distance < best_distance:
-            
-                if best_distance is None:
-                
-                    pass
+            #if best_distance is None or selected_distance < best_distance:
+            #    if best_distance is None:
+            #        pass
+            #    else:
+            #        new_ratio = round(best_distance / selected_distance, 3)
                     
-                else:
+            #    best_distance = selected_distance
+            #    best_facilities = selected_facilities
                 
-                    new_ratio = round(best_distance / selected_distance, 3)
-                    #print(f"{r}: {selected_distance} - {new_ratio}")
-                    
-                best_distance = selected_distance
-                best_facilities = selected_facilities
-                
-                """
-                if self.verbose is True:
-                    print("These are the activation values")
-                    print(self._activation_values)
-                    print()   
-                """
-
-            completed += 1
-
-        #import sys
-        #sys.exit(0)
-        #print(completed)
-        return best_facilities
+        #print("Best facilities: ",best_facilities)
+        #print("Active facilities: ",self._active_facility_list)
+        #return best_facilities
+        #current_time = time.time()
+        #print("Energy: ",max(sumBefore,sumAfter)," Time: ",current_time - start_time)
+        return self._active_facility_list
 
     def _initialize_per_run_arrays(self, r, runs):
     
@@ -332,7 +189,7 @@ class HopfieldOriginal:
             self._facilities[0,value] = 1
             self._active_facility_list.append(value)
             index = index + 1
-            
+        
         """
         if self.verbose is True:
             print("These are the initial random activation values")
