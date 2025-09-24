@@ -20,6 +20,7 @@ class CohenAddad:
         self.check_counter = 0
         self.swap_counter = 0
         
+        """
         if n > 6000:
             self.maxTime = 200
         elif n < 1000:
@@ -30,6 +31,26 @@ class CohenAddad:
             self.maxTime = 15
         else:
             self.maxTime = 15
+        """
+        
+        if n < 1000:
+            self.maxTime = 5
+        elif n > 1000 and n < 1500:
+            self.maxTime = 1
+        elif n > 1000 and n < 3000:
+            self.maxTime = 2
+        elif n > 1000 and n < 5000:
+            self.maxTime = 3
+        elif n > 1000 and n < 6000: 
+            self.maxTime = 20
+        elif n > 1000 and n < 15000 and k < 1000:
+            self.maxTime = 50
+        elif n > 1000 and n < 15000 and k == 1000:
+            self.maxTime = 75
+        elif n > 1000 and n < 15000 and k == 2000:
+            self.maxTime = 100
+        elif n > 1000 and n < 15000 and k > 2000:
+            self.maxTime = 200
 
     def run(self):
         """
