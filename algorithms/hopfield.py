@@ -221,7 +221,7 @@ class Hopfield:
             completed += 1
 
         #print(completed)
-        return best_facilities
+        return best_facilities, best_distance
 
     def _initialize_per_run_arrays(self, best_facilities, search_size, exclude_original):
     
