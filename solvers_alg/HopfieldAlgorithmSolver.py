@@ -12,14 +12,11 @@ FACILITY = 1
 CLIENT = 0
 
 class HopfieldAlgorithmSolver(KMPSolver):
-    def __init__(self, runs, use_gpu, graph, n, k, solutions=None, search_tree_config=None):
+    def __init__(self, use_gpu, graph, n, k, solutions=None, search_tree_config=None):
         # Initialize Variables for Solver
         self._name = "Hopfield"
         self._solutionValue = 0
         self._selectedFacilities = []
-
-        # Variable to be used by the solve function
-        self._runs = runs
 
         # Variables for Hopfield Algorithm
         self._n = n
@@ -118,96 +115,94 @@ class HopfieldAlgorithmSolver(KMPSolver):
         import time
         start_time = time.time()
         max_time = 235
-        
-        for r in range(self._runs):
-        
-            # Initialize our per run variables.
-            next_facilities, level, search_size, exclude_original = search_agent.get_facility_group()
-            self._initialize_per_run_arrays(next_facilities, search_size, exclude_original)
-
-            # Since we start with a facility update we need to sort the facility values at the start
-            self._sorted_facility_inner_values, self._sorted_facility_indices = torch.sort(self._inner_values[:, 0])
-            self._sorted_facility_inner_values = self._sorted_facility_inner_values[-self._k:]
-            self._sorted_facility_indices = self._sorted_facility_indices[-self._k:]
-
-            bandit = ChangeBandit(self._facility_length, 0.05)
-            facility_stabilized = False
-
-            # start the loop with a Facility update.
-            update_type = FACILITY
-            
-            while not facility_stabilized:
                 
-                current_time = time.time()
+        # Initialize our per run variables.
+        next_facilities, level, search_size, exclude_original = search_agent.get_facility_group()
+        self._initialize_per_run_arrays(next_facilities, search_size, exclude_original)
+
+        # Since we start with a facility update we need to sort the facility values at the start
+        self._sorted_facility_inner_values, self._sorted_facility_indices = torch.sort(self._inner_values[:, 0])
+        self._sorted_facility_inner_values = self._sorted_facility_inner_values[-self._k:]
+        self._sorted_facility_indices = self._sorted_facility_indices[-self._k:]
+
+        bandit = ChangeBandit(self._facility_length, 0.05)
+        facility_stabilized = False
+
+        # start the loop with a Facility update.
+        update_type = FACILITY
+        
+        while not facility_stabilized:
             
-                if current_time - start_time >= self.maxTime:
-                    break
+            current_time = time.time()
+        
+            if current_time - start_time >= self.maxTime:
+                break
+        
+            if update_type == FACILITY:
             
-                if update_type == FACILITY:
+                facility = bandit.get_action()
+                #print("Facility Update: ", facility)
                 
-                    facility = bandit.get_action()
-                    #print("Facility Update: ", facility)
+                has_changed = self._update_facility(facility)
+                #print("Activation value changed: ", has_changed)
+                #print("These are the current inner values")
+                #print(self._inner_values)
+                #print("")
+                #print("These are the current activation values")
+                #print(self._activation_values)                  
+                #print("")  
+                
+                if has_changed:
+                
+                    bandit.update_action(facility, 1)
                     
-                    has_changed = self._update_facility(facility)
-                    #print("Activation value changed: ", has_changed)
-                    #print("These are the current inner values")
+                    # Once the client nodes have stabilized they are not likely to move
+                    update_type = CLIENT #if not client_stabilized else FACILITY
+                    self._calculate_client_values()
+                    #print("Since a facility's activation value was changed, the inner values are re-calculated")
                     #print(self._inner_values)
                     #print("")
-                    #print("These are the current activation values")
-                    #print(self._activation_values)                  
-                    #print("")  
+                    facility_stabilized = self._is_stabilized_facility()
+                    #print("Calculate if facilities are stable...: ")
+                    #print(facility_stabilized)
+                    #print("")
                     
-                    if has_changed:
-                    
-                        bandit.update_action(facility, 1)
-                        
-                        # Once the client nodes have stabilized they are not likely to move
-                        update_type = CLIENT #if not client_stabilized else FACILITY
-                        self._calculate_client_values()
-                        #print("Since a facility's activation value was changed, the inner values are re-calculated")
-                        #print(self._inner_values)
-                        #print("")
-                        facility_stabilized = self._is_stabilized_facility()
-                        #print("Calculate if facilities are stable...: ")
-                        #print(facility_stabilized)
-                        #print("")
-                        
-                    else:
-                    
-                        #print("A facility's activation value was not changed, so another facility update will occur")
-                        #print("")
-                        bandit.update_action(facility, 0)
-                        update_type = FACILITY
-
                 else:
                 
-                    has_changed = self._update_client()
-                    #print("Client Update")
-                    #print("Client activation values changed: ", has_changed)
-                    #print("These are the current inner values")
+                    #print("A facility's activation value was not changed, so another facility update will occur")
+                    #print("")
+                    bandit.update_action(facility, 0)
+                    update_type = FACILITY
+
+            else:
+            
+                has_changed = self._update_client()
+                #print("Client Update")
+                #print("Client activation values changed: ", has_changed)
+                #print("These are the current inner values")
+                #print(self._inner_values)
+                #print("")
+                #print("These are the current activation values")
+                #print(self._activation_values)
+                #print("")
+                
+                
+                if has_changed:
+                
+                    #print("Since a client's activation value was changed, the inner values are re-calculated")
+                    self._calculate_facility_values()
+                    #print("New inner values after updating the client activation value")
                     #print(self._inner_values)
                     #print("")
-                    #print("These are the current activation values")
-                    #print(self._activation_values)
-                    #print("")
+                    # changing the client activation values will initiate a new sort of facilities
                     
+                    self._sorted_facility_inner_values, self._sorted_facility_indices = torch.sort(self._inner_values[:, 0])
+                    self._sorted_facility_inner_values = self._sorted_facility_inner_values[-self._k:]
+                    self._sorted_facility_indices = self._sorted_facility_indices[-self._k:]
+                    #print("The facilities with the top k inner values are:")
+                    #print(self._sorted_facility_indices)
                     
-                    if has_changed:
-                    
-                        #print("Since a client's activation value was changed, the inner values are re-calculated")
-                        self._calculate_facility_values()
-                        #print("New inner values after updating the client activation value")
-                        #print(self._inner_values)
-                        #print("")
-                        # changing the client activation values will initiate a new sort of facilities
-                        
-                        self._sorted_facility_inner_values, self._sorted_facility_indices = torch.sort(self._inner_values[:, 0])
-                        self._sorted_facility_inner_values = self._sorted_facility_inner_values[-self._k:]
-                        self._sorted_facility_indices = self._sorted_facility_indices[-self._k:]
-                        #print("The facilities with the top k inner values are:")
-                        #print(self._sorted_facility_indices)
-                        
-                    update_type = FACILITY
+                update_type = FACILITY
 
             selected_facilities, selected_distance = self._calculate_facilities_and_distance()
 

@@ -43,113 +43,113 @@ class HaralampievAlgorithmSolver(KMPSolver):
         self._alpha = calculate_temperature_decay(self._temperature, decay_interval)
         self._runs = runs
 
-        self.total_vertices = 2 * n * k
-        self.n = n
-        self.k = k
-        self.G = graph
-        self.V = np.random.randint(0, 2, self.total_vertices)
+        self._total_vertices = 2 * n * k
+        self._n = n
+        self._k = k
+        self._G = graph
+        self._V = np.random.randint(0, 2, self.total_vertices)
         #self.V = torch.randint(low=0, high=2, size=(self.total_vertices,), device="cuda")
         #self.group = [[] for _ in range(self.total_vertices)]
         #self.con = [{} for _ in range(self.total_vertices)]
         #self.generate_groups(self.n, self.k)
         #self.generate_weights(self.n, self.k)
 
-        self.distances = self.G._distances.numpy()
+        self._distances = self.G._distances.numpy()
         #self.distances = self.G._distances.to(device="cuda", copy=True)
 
         # caches to speed up getting the on group members
-        self.on_client_cache = {}
-        self.on_facility_group_cache = {}
-        self.on_facility_location_cache = {}
+        self._on_client_cache = {}
+        self._on_facility_group_cache = {}
+        self._on_facility_location_cache = {}
 
         # This cache keeps track of which clients are on for facility calculations
         # i.e., the facility f[j,s] will get the group of on c[i,j] clients.
         # Note: not an explicit on group.
-        self.on_client_location_cache = {}
+        self._on_client_location_cache = {}
 
         # caches to speed-up/avoid unnecessary calculate unit value calls
-        self.client_unit_value_cache = {}
-        self.facility_unit_value_cache = {}
+        self._client_unit_value_cache = {}
+        self._facility_unit_value_cache = {}
         
         if n > 6000 and k > 2000:
-            self.maxTime = 200
+            self._maxTime = 200
         elif n > 6000 and k <= 2000:
-            self.maxTime = 100
+            self._maxTime = 100
         elif n < 1000:
-            self.maxTime = 5
+            self._maxTime = 5
         elif n > 1000 and k < 1000:
-            self.maxTime = 10
+            self._maxTime = 10
         elif n > 1000 and k >= 1000:
-            self.maxTime = 15
+            self._maxTime = 15
         else:
-            self.maxTime = 15
+            self._maxTime = 15
 
     def warm_start(self, solution):
-        self.V = np.zeros(self.total_vertices)
+        self._V = np.zeros(self._total_vertices)
         # Set the facilities first
         for i, value in enumerate(solution):
-            facility_start = (self.n * self.k) + (i * self.n)
-            self.V[facility_start + value] = 1
+            facility_start = (self._n * self._k) + (i * self._n)
+            self._V[facility_start + value] = 1
 
         # Connect clients to the closest facility
-        for client in range(self.n):
+        for client in range(self._n):
             min_distance = None
             min_facility = None
             for facility in solution:
-                distance = self.distances[client, facility]
+                distance = self._distances[client, facility]
                 if min_distance is None or distance < min_distance:
                     min_distance = distance
                     min_facility = facility
 
             facility_index = solution.index(min_facility)
-            client_group = self.k * client
-            self.V[client_group + facility_index] = 1
+            client_group = self._k * client
+            self._V[client_group + facility_index] = 1
 
 
     def cache_on_groups(self):
         # Go through each client group and cache the on members
-        for client_group in range(self.n):
-            client_start = client_group * self.k
-            client_end = client_start + self.k
-            on_clients = np.flatnonzero(self.V[client_start:client_end])
+        for client_group in range(self._n):
+            client_start = client_group * self._k
+            client_end = client_start + self._k
+            on_clients = np.flatnonzero(self._V[client_start:client_end])
             # flatnonzero returns the indices for the slice, so we need to add the group start to get the actual
             # unit value.
             on_clients = np.add(on_clients, client_start)
-            self.on_client_cache[client_group] = sorted(on_clients.tolist())
+            self._on_client_cache[client_group] = sorted(on_clients.tolist())
 
         # Group on clients by the facility group that serves them
-        for facility_group in range(self.k):
+        for facility_group in range(self._k):
             client_start = facility_group
-            client_indices = np.array([i for i in range(client_start, self.n * self.k, self.k)])
-            client_values = self.V[client_indices]
+            client_indices = np.array([i for i in range(client_start, self._n * self._k, self._k)])
+            client_values = self._V[client_indices]
             on_indices = np.flatnonzero(client_values)
-            self.on_client_location_cache[facility_group] = client_indices[on_indices].tolist()
+            self._on_client_location_cache[facility_group] = client_indices[on_indices].tolist()
 
         # We need to cache the n-sized groups and the location groups separately.
         # Start with the n-sized groups
-        for facility_group in range(self.k):
-            facility_start = (self.n * self.k) + (facility_group * self.n)
-            facility_end = facility_start + self.n
-            on_facilities = np.flatnonzero(self.V[facility_start:facility_end])
+        for facility_group in range(self._k):
+            facility_start = (self._n * self._k) + (facility_group * self._n)
+            facility_end = facility_start + self._n
+            on_facilities = np.flatnonzero(self._V[facility_start:facility_end])
             on_facilities = np.add(on_facilities, facility_start)
-            self.on_facility_group_cache[facility_group] = sorted(on_facilities.tolist())
+            self._on_facility_group_cache[facility_group] = sorted(on_facilities.tolist())
 
         # Then get the facilities across groups that share the same location
-        for location in range(self.n):
-            start_index = (self.n * self.k) + location
-            location_indices = [i for i in range(start_index, self.total_vertices, self.n)]
+        for location in range(self._n):
+            start_index = (self._n * self._k) + location
+            location_indices = [i for i in range(start_index, self._total_vertices, self._n)]
             np_location_indices = np.array(location_indices)
-            on_location_indices = np.flatnonzero(self.V[location_indices])
+            on_location_indices = np.flatnonzero(self._V[location_indices])
             location_members = np_location_indices[on_location_indices]
-            self.on_facility_location_cache[location] = sorted(location_members.tolist())
+            self._on_facility_location_cache[location] = sorted(location_members.tolist())
 
     def cache_unit_value_groups(self):
         # Put dummy data into the client groups so that the value is calculated when needed
-        for client in range(self.n * self.k):
-            self.client_unit_value_cache[client] = (None, 0)
+        for client in range(self._n * self._k):
+            self._client_unit_value_cache[client] = (None, 0)
 
-        for facility in range(self.n * self.k, self.total_vertices):
-            self.facility_unit_value_cache[facility] = (None, 0)
+        for facility in range(self._n * self._k, self._total_vertices):
+            self._facility_unit_value_cache[facility] = (None, 0)
 
     def getName(self):
         return self._name
@@ -160,49 +160,36 @@ class HaralampievAlgorithmSolver(KMPSolver):
     def getSelectedFacilities(self):
         return self._selectedFacilities
     
-    def solve(self, graph, n, k):
+    def solve(self):
         warm_instance = RandomChoiceAlgorithm()
-        warm_solution = warm_instance.run(graph, n, k)
+        warm_solution = warm_instance.run(self._G, self._n, self._k)
         self.warm_start(warm_solution)
         # Epoch length can be variable so we allow a None assignment in order to signal that we should use n
         if self._epoch_length is None:
-            epoch_length = n
+            epoch_length = self._n
         else:
             epoch_length = self._epoch_length
 
-        best_facilities = None
-        best_distance = None
-        for _ in range(self._runs):
-            self.run(temperature=self._temperature, epoch_length=epoch_length, alpha=self._alpha)
-            facilities = get_facilities(self, n, k)
-
-            current_distance = calculate_distance(graph, facilities, n)
-            if best_distance is None or current_distance < best_distance:
-                best_distance = current_distance
-                best_facilities = facilities
-
-            self.reset()
-            self.warm_start(best_facilities)
-
-        self._selectedFacilities = best_facilities
-        self._solutionValue = best_distance
-    
-    def run(self, temperature, epoch_length, alpha):
         # Set up the cache here instead of the init function because the network can be reused with different
         # starting values
         self.cache_on_groups()
         self.cache_unit_value_groups()
 
-        units = [i for i in range(self.total_vertices)]
+        units = [i for i in range(self._total_vertices)]
         has_stabilized = False
         while not has_stabilized:
             random.shuffle(units)
             for unit in units:
-                self.update(temperature, unit)
+                self.update(self._temperature, unit)
 
             # The max is here to avoid too small of a value being treated as a 0 (we divide by T later)
-            temperature = max(0.0000001, temperature * alpha)
+            self._temperature = max(0.0000001, self._temperature * self._alpha)
             has_stabilized = self.is_valid()
+
+            facilities = get_facilities(self, self._n, self._k)
+
+        self._selectedFacilities = facilities
+        self._solutionValue = calculate_distance(self._G, facilities, self._n)
     
     def update(self, temperature, unit):
         """
@@ -232,57 +219,57 @@ class HaralampievAlgorithmSolver(KMPSolver):
         # If we receive an empty list then BEST is None
         if not on_values:
             # if there are no ON values in a group, then flip the variable on
-            self.V[X] = 1
+            self._V[X] = 1
         else:
             BEST = min(on_values)
             X_value = self.calculate_unit_value(X)
             delta = abs(BEST - X_value)
 
             if X_value < BEST:
-                self.V[X] = 1
+                self._V[X] = 1
                 if self.accept(delta, temperature):
-                    self.V[X] = 0
+                    self._V[X] = 0
             else:
-                self.V[X] = 0
+                self._V[X] = 0
                 if self.accept(delta, temperature):
-                    self.V[X] = 1
+                    self._V[X] = 1
 
         self.cache_unit_on_status(X)
 
     def cache_unit_on_status(self, X):
         # make sure the on group cache is updated correctly
-        if X < self.n * self.k:
+        if X < self._n * self._k:
             # Cache the k-sized competing client groups
-            client_group = X // self.k
+            client_group = X // self._k
             # If X is on and not in the group, add it
-            if self.V[X] == 1 and (X not in self.on_client_cache[client_group]):
-                self.on_client_cache[client_group].append(X)
-                self.on_client_cache[client_group] = sorted(self.on_client_cache[client_group])
+            if self._V[X] == 1 and (X not in self._on_client_cache[client_group]):
+                self._on_client_cache[client_group].append(X)
+                self._on_client_cache[client_group] = sorted(self._on_client_cache[client_group])
             # If X is off and in the group remove it.
-            elif self.V[X] == 0 and (X in self.on_client_cache[client_group]):
-                self.on_client_cache[client_group].remove(X)
+            elif self._V[X] == 0 and (X in self._on_client_cache[client_group]):
+                self._on_client_cache[client_group].remove(X)
 
             # Cache the clients based on the serving facility group i.e group 0 contains C(0,0), C(1,0), ...
-            facility_group = X % self.k
-            if self.V[X] == 1 and (X not in self.on_client_location_cache[facility_group]):
-                self.on_client_location_cache[facility_group].append(X)
-                self.on_client_location_cache[facility_group] = sorted(self.on_client_location_cache[facility_group])
-            elif self.V[X] == 0 and (X in self.on_client_location_cache[facility_group]):
-                self.on_client_location_cache[facility_group].remove(X)
+            facility_group = X % self._k
+            if self._V[X] == 1 and (X not in self._on_client_location_cache[facility_group]):
+                self._on_client_location_cache[facility_group].append(X)
+                self._on_client_location_cache[facility_group] = sorted(self._on_client_location_cache[facility_group])
+            elif self._V[X] == 0 and (X in self._on_client_location_cache[facility_group]):
+                self._on_client_location_cache[facility_group].remove(X)
         else:
-            facility_group = (X - (self.n * self.k)) // self.n
-            if self.V[X] == 1 and (X not in self.on_facility_group_cache[facility_group]):
-                self.on_facility_group_cache[facility_group].append(X)
-                self.on_facility_group_cache[facility_group] = sorted(self.on_facility_group_cache[facility_group])
-            elif self.V[X] == 0 and (X in self.on_facility_group_cache[facility_group]):
-                self.on_facility_group_cache[facility_group].remove(X)
+            facility_group = (X - (self._n * self._k)) // self._n
+            if self._V[X] == 1 and (X not in self._on_facility_group_cache[facility_group]):
+                self._on_facility_group_cache[facility_group].append(X)
+                self._on_facility_group_cache[facility_group] = sorted(self._on_facility_group_cache[facility_group])
+            elif self._V[X] == 0 and (X in self._on_facility_group_cache[facility_group]):
+                self._on_facility_group_cache[facility_group].remove(X)
 
-            location_group = X % self.n
-            if self.V[X] == 1 and (X not in self.on_facility_location_cache[location_group]):
-                self.on_facility_location_cache[location_group].append(X)
-                self.on_facility_location_cache[location_group] = sorted(self.on_facility_location_cache[location_group])
-            elif self.V[X] == 0 and (X in self.on_facility_location_cache[location_group]):
-                self.on_facility_location_cache[location_group].remove(X)
+            location_group = X % self._n
+            if self._V[X] == 1 and (X not in self._on_facility_location_cache[location_group]):
+                self._on_facility_location_cache[location_group].append(X)
+                self._on_facility_location_cache[location_group] = sorted(self._on_facility_location_cache[location_group])
+            elif self._V[X] == 0 and (X in self._on_facility_location_cache[location_group]):
+                self._on_facility_location_cache[location_group].remove(X)
 
     def accept(self, delta, temperature):
         """
@@ -308,7 +295,7 @@ class HaralampievAlgorithmSolver(KMPSolver):
 
     def calculate_unit_value(self, X):
         # Client receiving Facility values
-        if X < self.n * self.k:
+        if X < self._n * self._k:
             return self.calculate_client_unit_value(X)
         # Facility receiving Client values
         else:
@@ -317,9 +304,9 @@ class HaralampievAlgorithmSolver(KMPSolver):
     def calculate_facility_unit_value(self, X):
         # Try the cache first; check if the on values for the connected clients group have changed;
         # if not, use the cached value
-        facility_group = (X - (self.n * self.k)) // self.n
-        client_on_values = self.on_client_location_cache[facility_group]
-        cached_on_clients, cached_unit_value = self.facility_unit_value_cache[X]
+        facility_group = (X - (self._n * self._k)) // self._n
+        client_on_values = self._on_client_location_cache[facility_group]
+        cached_on_clients, cached_unit_value = self._facility_unit_value_cache[X]
         if cached_on_clients == client_on_values:
             return cached_unit_value
         # Calculate the unit value and cache it
@@ -328,33 +315,33 @@ class HaralampievAlgorithmSolver(KMPSolver):
             if len(client_on_values) == 0:
                 unit_value = 0.0
             else:
-                on_to_indices = np.array(client_on_values) // self.k
-                location = X % self.n
-                unit_value = np.sum(self.distances[location, on_to_indices])
+                on_to_indices = np.array(client_on_values) // self._k
+                location = X % self._n
+                unit_value = np.sum(self._distances[location, on_to_indices])
 
             # cache the value before returning
-            self.facility_unit_value_cache[X] = (client_on_values.copy(), unit_value)
+            self._facility_unit_value_cache[X] = (client_on_values.copy(), unit_value)
             return unit_value
 
     def calculate_client_unit_value(self, X):
         # Try the cache first; check if the on values for the connected facility group have changed;
         # if not, use the cached value
-        facility_group = X % self.k
-        facility_on_values = self.on_facility_group_cache[facility_group]
-        cached_on_facilities, cached_unit_value = self.client_unit_value_cache[X]
+        facility_group = X % self._k
+        facility_on_values = self._on_facility_group_cache[facility_group]
+        cached_on_facilities, cached_unit_value = self._client_unit_value_cache[X]
         if cached_on_facilities == facility_on_values:
             return cached_unit_value
         # Calculate the unit value and cache it
         else:
             # TODO - might be able to use the on values directly here
-            facility_start = (self.n * self.k) + (facility_group * self.n)
-            facility_end = facility_start + self.n
-            facility_values = self.V[facility_start:facility_end]
-            client_location = X // self.k
-            distances = self.distances[client_location, :]
+            facility_start = (self._n * self._k) + (facility_group * self.n)
+            facility_end = facility_start + self._n
+            facility_values = self._V[facility_start:facility_end]
+            client_location = X // self._k
+            distances = self._distances[client_location, :]
             unit_value = np.sum(facility_values * distances)
             # cache the value before returning
-            self.client_unit_value_cache[X] = (facility_on_values.copy(), unit_value)
+            self._client_unit_value_cache[X] = (facility_on_values.copy(), unit_value)
             return unit_value
 
     def get_unit_group(self, unit):
@@ -384,7 +371,7 @@ class HaralampievAlgorithmSolver(KMPSolver):
         :return: A set of unit indices representing units connected to X with a value of 1.
         """
         # if the unit is a client, select competitors from the first half of V
-        if X < self.n * self.k:
+        if X < self._n * self._k:
             """
             client_group = X // self.k
             client_start = self.k * client_group
@@ -395,8 +382,8 @@ class HaralampievAlgorithmSolver(KMPSolver):
             #on_members = torch.add(on_members, client_start)
             return on_members #torch.flatten(on_members)
             """
-            client_group = X // self.k
-            return self.on_client_cache[client_group]
+            client_group = X // self._k
+            return self._on_client_cache[client_group]
         # else select from the second half of V
         else:
             """
@@ -422,11 +409,11 @@ class HaralampievAlgorithmSolver(KMPSolver):
             return full_on_members
             #return on_members #torch.flatten(on_members)
             """
-            facility_group = (X - (self.n * self.k)) // self.n
-            facility_on = self.on_facility_group_cache[facility_group]
+            facility_group = (X - (self._n * self._k)) // self._n
+            facility_on = self._on_facility_group_cache[facility_group]
 
-            location = (X - (self.n * self.k)) % self.n
-            location_on = self.on_facility_location_cache[location]
+            location = (X - (self._n * self._k)) % self._n
+            location_on = self._on_facility_location_cache[location]
 
             full_on = facility_on + location_on
             # convert to a set to ensure elements are unique
@@ -442,29 +429,29 @@ class HaralampievAlgorithmSolver(KMPSolver):
         """
 
         # Check that there is exactly one active neuron per client group
-        for i in range(self.n):
-            client_start = i * self.k
-            client_end = client_start + self.k
-            total = np.sum(self.V[client_start:client_end])
+        for i in range(self._n):
+            client_start = i * self._k
+            client_end = client_start + self._k
+            total = np.sum(self._V[client_start:client_end])
             #total = torch.sum(self.V[client_start:client_end])
             if int(total) != 1:
                 return False
 
         # Check that there is exactly one active neuron per facility group
-        for i in range(self.k):
-            facility_start = (self.n * self.k) + (i * self.n)
-            facility_end = facility_start + self.n
-            total = np.sum(self.V[facility_start:facility_end])
+        for i in range(self._k):
+            facility_start = (self._n * self._k) + (i * self._n)
+            facility_end = facility_start + self._n
+            total = np.sum(self._V[facility_start:facility_end])
             #total = torch.sum(self.V[facility_start:facility_end])
             if int(total) != 1:
                 return False
 
         # Check that each facility is assigned to a unique location
         used_locations = set()
-        for i in range(self.k):
-            facility_start = (self.n * self.k) + (i * self.n)
-            facility_end = facility_start + self.n
-            on_facilities = np.flatnonzero(self.V[facility_start:facility_end])
+        for i in range(self._k):
+            facility_start = (self._n * self._k) + (i * self._n)
+            facility_end = facility_start + self._n
+            on_facilities = np.flatnonzero(self._V[facility_start:facility_end])
             if len(on_facilities) != 1:
                 return False
 
@@ -477,33 +464,17 @@ class HaralampievAlgorithmSolver(KMPSolver):
 
         return True
 
-    def reset(self):
-        """
-        Reset the V array with random values in preparation for another run.
-        """
-        self.V = np.random.randint(0, 2, self.total_vertices)
-        #self.V = torch.randint(low=0, high=2, size=(self.total_vertices,), device="cuda")
-
-        self.on_client_cache = {}
-        self.on_facility_group_cache = {}
-        self.on_facility_location_cache = {}
-
-        self.on_client_location_cache = {}
-
-        self.client_unit_value_cache = {}
-        self.facility_unit_value_cache = {}
-
     def get_best_on_group_member(self, group):
         """
         Helper function to return the best 'ON' member of a group.
         :param group: The group to check.
         :return: The index of the best 'ON' unit.
         """
-        assert (sum(self.V[unit] for unit in group) >= 1)
+        assert (sum(self._V[unit] for unit in group) >= 1)
         selected = None
         best = None
         for unit in group:
-            if self.V[unit] == 1:
+            if self._V[unit] == 1:
                 value = self.calculate_unit_value(unit)
                 if best is None or value < best:
                     selected = unit
@@ -517,17 +488,17 @@ class HaralampievAlgorithmSolver(KMPSolver):
         :param facility_groups: The facilities groups that will be converted into location groups.
         :return: A 2D array representing facilities competing for one location.
         """
-        location_groups = [[] for _ in range(self.n)]
-        for i in range(self.n):
-            for j in range(self.k):
+        location_groups = [[] for _ in range(self._n)]
+        for i in range(self._n):
+            for j in range(self._k):
                 location_groups[i].append(facility_groups[j][i])
         return location_groups
 
     def get_facility_location_count(self, facility_groups):
-        location_counts = [0 for _ in range(self.n)]
+        location_counts = [0 for _ in range(self._n)]
         # Count how many facilities are in each location
         for group in facility_groups:
-            activated_variables = self.V[group[0]:group[0] + len(group)]
+            activated_variables = self._V[group[0]:group[0] + len(group)]
             location_counts = np.add(location_counts, activated_variables)
         return location_counts
 
@@ -571,8 +542,8 @@ class HaralampievAlgorithmSolver(KMPSolver):
                 cf = (k * i) + j
                 for s in range(n):
                     fl = (n * k) + s + (n * j)
-                    self.con[cf][str(fl)] = self.G.get_standard_distance(i, s)
-                    self.con[fl][str(cf)] = self.G.get_standard_distance(i, s)
+                    self.con[cf][str(fl)] = self._G.get_standard_distance(i, s)
+                    self.con[fl][str(cf)] = self._G.get_standard_distance(i, s)
 
     def cf(self, i, j):
         """
@@ -583,8 +554,8 @@ class HaralampievAlgorithmSolver(KMPSolver):
         :return: 1 or 0 if the binary variable representing this connection is
                  activated.
         """
-        variable_index = (i * self.k) + j
-        return self.V[variable_index]
+        variable_index = (i * self._k) + j
+        return self._V[variable_index]
 
     def fl(self, j, s):
         """
@@ -596,8 +567,8 @@ class HaralampievAlgorithmSolver(KMPSolver):
         :param s: The index of the location.
         :return: 1 or 0 if the binary variable representing this connection is activated.
         """
-        variable_index = s + (self.n * j) + int(self.total_vertices / 2)
-        return self.V[variable_index]
+        variable_index = s + (self._n * j) + int(self._total_vertices / 2)
+        return self._V[variable_index]
 
 
 class HaralampievSolutionChecker:
@@ -607,72 +578,72 @@ class HaralampievSolutionChecker:
     """
 
     def __init__(self, haralampiev_network):
-        self.network = haralampiev_network
+        self._network = haralampiev_network
 
     def check(self):
         # check facilities first
-        facility_groups = [self.network.get_unit_group(unit) for unit in
-                           range((self.network.n * self.network.k), self.network.total_vertices, self.network.n)]
+        facility_groups = [self._network.get_unit_group(unit) for unit in
+                           range((self._network.n * self._network.k), self._network.total_vertices, self._network.n)]
         self.select_best_facility_in_group(facility_groups)
         self.remove_duplicate_facility_locations(facility_groups)
 
         # check client groups
-        client_groups = [self.network.get_unit_group(unit) for unit in
-                         range(0, (self.network.n * self.network.k), self.network.k)]
+        client_groups = [self._network.get_unit_group(unit) for unit in
+                         range(0, (self._network.n * self._network.k), self._network.k)]
         for client_group in client_groups:
             # check that each client group has only one connection
-            if sum(self.network.V[unit] for unit in client_group) != 1:
-                selected = self.network.get_best_group_member(client_group)
+            if sum(self._network.V[unit] for unit in client_group) != 1:
+                selected = self._network.get_best_group_member(client_group)
                 for unit in client_group:
-                    self.network.V[unit] = 1 if unit == selected else 0
+                    self._network.V[unit] = 1 if unit == selected else 0
 
             # check that each client group is connected to a facility
-            if sum(self.network.V[unit] for unit in client_group) == 0:
-                selected = self.network.get_best_group_member(client_group)
+            if sum(self._network.V[unit] for unit in client_group) == 0:
+                selected = self._network.get_best_group_member(client_group)
                 for unit in client_group:
-                    self.network.V[unit] = 1 if unit == selected else 0
+                    self._network.V[unit] = 1 if unit == selected else 0
 
     def select_best_facility_in_group(self, facility_groups):
         # For groups with too many or no facilities, choose the location with the best value
         for group in facility_groups:
             # No facilities placed
-            if sum(self.network.V[unit] for unit in group) == 0:
-                selected = self.network.get_best_group_member(group)
+            if sum(self._network.V[unit] for unit in group) == 0:
+                selected = self._network.get_best_group_member(group)
             # 1 or more facilities placed
             else:
-                selected = self.network.get_best_on_group_member(group)
+                selected = self._network.get_best_on_group_member(group)
             for unit in group:
-                self.network.V[unit] = 1 if unit == selected else 0
+                self._network.V[unit] = 1 if unit == selected else 0
 
     def remove_duplicate_facility_locations(self, facility_groups):
-        location_groups = self.network.convert_facility_groups_to_location_groups(facility_groups)
+        location_groups = self._network.convert_facility_groups_to_location_groups(facility_groups)
         # get all open facility spots
         open_locations = []
         for location, location_group in enumerate(location_groups):
-            if sum(self.network.V[unit] for unit in location_group) == 0:
+            if sum(self._network.V[unit] for unit in location_group) == 0:
                 open_locations.append(location)
 
         # keep the best facility on each location
         for group in location_groups:
             # if more than 1 facility, keep the best
-            num_facilities_on_location = sum(self.network.V[unit] for unit in group)
+            num_facilities_on_location = sum(self._network.V[unit] for unit in group)
             if num_facilities_on_location > 1:
                 # find the best 'on' group member and turn off the rest
-                selected = self.network.get_best_on_group_member(group)
+                selected = self._network.get_best_on_group_member(group)
                 for unit in group:
                     if unit != selected:
-                        self.network.V[unit] = 0
+                        self._network.V[unit] = 0
 
         # for empty facility-groups, place them on the best open spot that they have access to
         for facility_group in facility_groups:
-            if sum(self.network.V[unit] for unit in facility_group) == 0:
+            if sum(self._network.V[unit] for unit in facility_group) == 0:
                 # turn on all potential facilities and then select the best
                 for i in open_locations:
                     unit = facility_group[i]
-                    self.network.V[unit] = 1
-                selected = self.network.get_best_on_group_member(facility_group)
+                    self._network.V[unit] = 1
+                selected = self._network.get_best_on_group_member(facility_group)
                 for unit in facility_group:
-                    self.network.V[unit] = 0 if unit != selected else 1
+                    self._network.V[unit] = 0 if unit != selected else 1
                 # remove the open location from the list
                 open_locations.remove(facility_group.index(selected))
     
