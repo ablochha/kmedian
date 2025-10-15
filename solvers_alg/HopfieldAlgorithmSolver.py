@@ -96,7 +96,7 @@ class HopfieldAlgorithmSolver(KMPSolver):
     def getSolutionValue(self):
         return self._solutionValue
 
-    def getSelectedFacilites(self):
+    def getSelectedFacilities(self):
         return self._selectedFacilities
 
     def solve(self, starter_facilities=None):

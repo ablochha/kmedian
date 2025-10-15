@@ -157,7 +157,7 @@ class HaralampievAlgorithmSolver(KMPSolver):
     def getSolutionValue(self):
         return self._solutionValue
     
-    def getSelectedFacilites(self):
+    def getSelectedFacilities(self):
         return self._selectedFacilities
     
     def solve(self, graph, n, k):

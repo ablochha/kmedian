@@ -16,5 +16,5 @@ class Solver(ABC):
         pass
 
     @abstractmethod
-    def getSelectedFacilites(self):
+    def getSelectedFacilities(self):
         pass

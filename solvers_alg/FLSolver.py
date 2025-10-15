@@ -16,5 +16,5 @@ class FLSolver(Solver):
     def getSolutionValue(self):
         return self.solutionValue
 
-    def getSelectedFacilites(self):
+    def getSelectedFacilities(self):
         return self.selectedFacilities
