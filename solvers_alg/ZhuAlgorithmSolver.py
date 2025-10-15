@@ -59,7 +59,7 @@ class ZhuAlgorithmSolver(KMPSolver):
     def getSolutionValue(self):
         return self._solutionValue
     
-    def run(self):
+    def solve(self):
     
         # print("Vertices: ", self.n, ", Facilities: ", self.k)
         
