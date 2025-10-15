@@ -1,0 +1,127 @@
+import random
+import time
+
+import torch
+
+from solvers_alg.KMPSolver import KMPSolver
+
+
+class AryaMultiSolver(KMPSolver):
+    def __init__(self, graph, n, k, max_time, solution=None):
+        # Initialize Variables for Solver
+        self._name = "Arya Multi"
+        self._solutionValue = 0
+        self._selectedFacilities = []
+
+        self._graph = graph
+        self._n = n
+        self._k = k
+        self._max_time = max_time
+        self._check_counter = 0
+        self._swap_counter = 0
+
+        if solution:
+            vertices = []
+            for i in range(n):
+                if i in solution:
+                    vertices.append(1)
+                else:
+                    vertices.append(0)
+        else:
+            vertices = [0 for _ in range(n)]
+            # randomly pick k vertices
+            for value in random.sample([i for i in range(0, n)], k=k):
+                vertices[value] = 1
+        self._vertices = vertices
+
+        if n > 6000 and k > 2000:
+            self._maxTime = 200
+        elif n > 6000 and k <= 2000:
+            self._maxTime = 100
+        elif n < 1000:
+            self._maxTime = 5
+        elif n > 1000 and k < 1000:
+            self._maxTime = 10
+        elif n > 1000 and k >= 1000:
+            self._maxTime = 15
+        else:
+            self._maxTime = 15
+
+    def getName(self):
+        return self._name
+    
+    def getSolutionValue(self):
+        return self._solutionValue
+    
+    def getSelectedFacilities(self):
+        return self._selectedFacilities
+    
+    """
+    Randomly select a client and compare swapping it with each facility.
+    If the distance is improved, we select the swap pair that decreases the distance the most.
+    Otherwise, keep the original state.
+
+    :return: None
+    """
+    def solve(self):
+
+        #print("START")
+        start_time = time.time()
+        best_distance = self.calculate_distance(self._vertices)
+        #print("Max time:", self.max_time)
+        
+        while True:
+        
+            #print("IN LOOP")
+            open_locations = [i for i in range(self._n) if self._vertices[i] == 0]
+            facilities = [i for i in range(self._n) if self._vertices[i] == 1]
+            has_swapped = False
+            
+            while has_swapped is False:
+            
+                client1, client2 = random.sample(open_locations, k=2)
+                facility1, facility2 = random.sample(facilities, k=2)
+                self._check_counter += 1
+                #facility = None
+            
+                temp_vertices = self._vertices.copy()
+                temp_vertices[facility1] = 0
+                temp_vertices[facility2] = 0
+                temp_vertices[client1] = 1
+                temp_vertices[client2] = 1
+                new_distance = self.calculate_distance(temp_vertices)
+            
+                if new_distance < (1 - (1 / self._n)) * best_distance:
+                        
+                    #print("UPDATE SOLUTION")
+                    best_distance = new_distance
+                    self._vertices[facility1] = 0
+                    self._vertices[facility2] = 0
+                    self._vertices[client1] = 1
+                    self._vertices[client2] = 1
+                    has_swapped = True
+                    self._swap_counter += 1
+                
+                if time.time() - start_time >= self._maxTime:
+                    
+                    #print("HIT TIME LIMIT")
+                    break 
+                    
+            if time.time() - start_time >= self._maxTime:
+                    
+                #print("HIT TIME LIMIT")
+                break       
+
+        self._selectedFacilities = [i for i in range(self._n) if self._vertices[i] == 1]
+        self._solutionValue = best_distance
+
+    """
+    Helper function to get the total distance of all clients to their nearest facility.
+    :param vertices: The solution to check
+    :return: The sum of distances from clients to their nearest facility.
+    """
+    def calculate_distance(self, vertices):
+    
+        facility_tensor = torch.tensor(vertices)
+        max_values, _ = torch.max(facility_tensor * (1 - self._graph._normalized_distances), dim=1)
+        return torch.sum(1 - max_values)
