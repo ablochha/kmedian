@@ -227,8 +227,7 @@ class HopfieldAlgorithmSolver(KMPSolver):
             completed += 1
 
         #print(completed)
-        self._selectedFacilities = best_facilities
-        self._solutionValue = best_distance
+        self._selectedFacilities, self._solutionValue = self._calculate_facilities_and_distance
 
     def _initialize_per_run_arrays(self, best_facilities, search_size, exclude_original):
     
