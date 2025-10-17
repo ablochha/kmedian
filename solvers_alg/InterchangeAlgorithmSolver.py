@@ -81,6 +81,15 @@ class InterchangeAlgorithmSolver(KMPSolver):
         elif n > 1000 and n < 15000 and k > 2000:
             self.maxTime = 200
 
+    def getName(self):
+        return self._name
+    
+    def getSelectedFacilities(self):
+        return self._selectedFacilities
+    
+    def getSolutionValue(self):
+        return self._solutionValue
+
     def solve(self):
         self._start_time = time.time()
         self._affected_clients = [i for i in range(self._n) if self._vertices[i] == 0]
