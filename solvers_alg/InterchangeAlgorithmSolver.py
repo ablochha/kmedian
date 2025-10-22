@@ -21,13 +21,29 @@ class InterchangeAlgorithmSolver(KMPSolver):
         self._check_counter = 0
         self._swap_counter = 0
 
+        self._vertices = None
+        
+        #fast interchange tensors
+        self._gain = None
+        self._loss = None
+        closest_values, closest_indices = None
+        closest_values = None
+        self._d1 = None
+        self._d1_indices = None
+        self._d2 = None
+        self._d2_indices = None
+        self._extra = None
+        
+        self.maxTime = None
+
+    def initialize(self):
         # prepare the initial vertices
-        vertices = [0 for _ in range(n)]
+        vertices = [0 for _ in range(self._n)]
         # randomly pick k vertices
-        for value in random.sample([i for i in range(0, n)], k=k):
+        for value in random.sample([i for i in range(0, self._n)], k=self._k):
             vertices[value] = 1
         self._vertices = torch.tensor(vertices)
-        
+
         #fast interchange tensors
         self._gain = torch.zeros(size=(self._n,))
         self._loss = torch.zeros(size=(self._n,))
@@ -38,47 +54,24 @@ class InterchangeAlgorithmSolver(KMPSolver):
         self._d2 = closest_values[:,1]
         self._d2_indices = closest_indices[:,1]
         self._extra = torch.zeros(size=(self._n, self._n))
-        #print("Normalized Distances:")
-        #print(self.graph._normalized_distances)
-        #print("Vertices:")
-        #print(self.vertices)
-        #print("Closest Values:")
-        #print(closest_values)
-        #print("D1 indices:")
-        #print(self.d1_indices)
-        #print("D2 indices:")
-        #print(self.d2_indices)
         
-        """
-        if n > 6000:
-            self.maxTime = 200
-        elif n < 1000:
+        if self._n < 1000:
             self.maxTime = 5
-        elif n > 1000 and k < 1000:
-            self.maxTime = 10
-        elif n > 1000 and k >= 1000:
-            self.maxTime = 15
-        else:
-            self.maxTime = 15
-        """
-        
-        if n < 1000:
-            self.maxTime = 5
-        elif n > 1000 and n < 1500:
+        elif self._n > 1000 and self._n < 1500:
             self.maxTime = 1
-        elif n > 1000 and n < 3000:
+        elif self._n > 1000 and self._n < 3000:
             self.maxTime = 2
-        elif n > 1000 and n < 5000:
+        elif self._n > 1000 and self._n < 5000:
             self.maxTime = 3
-        elif n > 1000 and n < 6000: 
+        elif self._n > 1000 and self._n < 6000:
             self.maxTime = 20
-        elif n > 1000 and n < 15000 and k < 1000:
+        elif self._n > 1000 and self._n < 15000 and self._k < 1000:
             self.maxTime = 50
-        elif n > 1000 and n < 15000 and k == 1000:
+        elif self._n > 1000 and self._n < 15000 and self._k == 1000:
             self.maxTime = 75
-        elif n > 1000 and n < 15000 and k == 2000:
+        elif self._n > 1000 and self._n < 15000 and self._k == 2000:
             self.maxTime = 100
-        elif n > 1000 and n < 15000 and k > 2000:
+        elif self._n > 1000 and self._n < 15000 and self._k > 2000:
             self.maxTime = 200
 
     def getName(self):
@@ -89,6 +82,15 @@ class InterchangeAlgorithmSolver(KMPSolver):
     
     def getSolutionValue(self):
         return self._solutionValue
+    
+    def setN(self, n):
+        self._n = n
+
+    def setK(self, k):
+        self._k = k
+
+    def setGraph(self, graph):
+        self._graph = graph
 
     def solve(self):
         self._start_time = time.time()

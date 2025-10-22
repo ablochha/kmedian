@@ -21,11 +21,20 @@ class LocalSearchSolver(KMPSolver):
         self._check_counter = 0
         self._swap_counter = 0
 
+        self._solution = solution
+        self._vertices = None
+
+        self._maxTime = 0
+
+    def initialize(self):
+        if self._graph is None or self._n is None or self._k is None:
+            raise ValueError("Graph, n, and k must be set before calling initialize().")
+        
         # prepare the initial vertices
-        if solution:
+        if self._solution:
             vertices = []
             for i in range(self._n):
-                if i in solution:
+                if i in self._solution:
                     vertices.append(1)
                 else:
                     vertices.append(0)
@@ -37,24 +46,25 @@ class LocalSearchSolver(KMPSolver):
 
         self._vertices = torch.tensor(vertices)
 
-        if n < 1000:
+        if self._n < 1000:
             self._maxTime = 5
-        elif n > 1000 and n < 1500:
+        elif self._n > 1000 and self._n < 1500:
             self._maxTime = 1
-        elif n > 1500 and n < 3000:
+        elif self._n > 1500 and self._n < 3000:
             self._maxTime = 2
-        elif n > 3000 and n < 5000:
+        elif self._n > 3000 and self._n < 5000:
             self._maxTime = 3
-        elif n > 5000 and n < 6000:
+        elif self._n > 5000 and self._n < 6000:
             self._maxTime = 20
-        elif n > 6000 and n < 15000 and k < 1000:
+        elif self._n > 6000 and self._n < 15000 and self._k < 1000:
             self._maxTime = 50
-        elif n > 6000 and n < 15000 and k == 1000:
+        elif self._n > 6000 and self._n < 15000 and self._k == 1000:
             self._maxTime = 75
-        elif n > 6000 and n < 15000 and k == 2000:
+        elif self._n > 6000 and self._n < 15000 and self._k == 2000:
             self._maxTime = 100
-        elif n > 6000 and n < 15000 and k > 2000:
+        elif self._n > 6000 and self._n < 15000 and self._k > 2000:
             self._maxTime = 200
+
 
     def getName(self):
         return self._name
@@ -64,6 +74,15 @@ class LocalSearchSolver(KMPSolver):
 
     def getSelectedFacilities(self):
         return self._selectedFacilities
+    
+    def setN(self, n):
+        self._n = n
+
+    def setK(self, k):
+        self._k = k
+
+    def setGraph(self, graph):
+        self._graph = graph
     
     def solve(self):
         start_time = time.time()

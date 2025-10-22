@@ -31,7 +31,7 @@ def calculate_temperature_decay(T, iterations):
 
 
 class HaralampievAlgorithmSolver(KMPSolver):
-    def __init__(self, temperature, epoch_length, decay_interval, runs, graph, n, k, solution=None):
+    def __init__(self, temperature, epoch_length, decay_interval, graph=None, n=None, k=None, solution=None):
         # Initialize Variables for Solver
         self._name = "Haralampiev Network"
         self._solutionValue = 0
@@ -41,21 +41,10 @@ class HaralampievAlgorithmSolver(KMPSolver):
         self._temperature = temperature
         self._epoch_length = epoch_length  # Set to none in order to dynamically get n at runtime
         self._alpha = calculate_temperature_decay(self._temperature, decay_interval)
-        self._runs = runs
 
-        self._total_vertices = 2 * n * k
         self._n = n
         self._k = k
         self._G = graph
-        self._V = np.random.randint(0, 2, self.total_vertices)
-        #self.V = torch.randint(low=0, high=2, size=(self.total_vertices,), device="cuda")
-        #self.group = [[] for _ in range(self.total_vertices)]
-        #self.con = [{} for _ in range(self.total_vertices)]
-        #self.generate_groups(self.n, self.k)
-        #self.generate_weights(self.n, self.k)
-
-        self._distances = self.G._distances.numpy()
-        #self.distances = self.G._distances.to(device="cuda", copy=True)
 
         # caches to speed up getting the on group members
         self._on_client_cache = {}
@@ -70,16 +59,37 @@ class HaralampievAlgorithmSolver(KMPSolver):
         # caches to speed-up/avoid unnecessary calculate unit value calls
         self._client_unit_value_cache = {}
         self._facility_unit_value_cache = {}
+
+        self._total_vertices = None
+        self._V = None
+        self._distances = None
+        self._maxTime = None
+
+    def initialize(self):
+
+        if self._G is None or self._n is None or self._k is None:
+            raise ValueError("Graph, n, and k must be set before calling initialize().")
         
-        if n > 6000 and k > 2000:
+        self._total_vertices = 2 * self._n * self._k
+        self._V = np.random.randint(0, 2, self._total_vertices)
+        #self.V = torch.randint(low=0, high=2, size=(self.total_vertices,), device="cuda")
+        #self.group = [[] for _ in range(self.total_vertices)]
+        #self.con = [{} for _ in range(self.total_vertices)]
+        #self.generate_groups(self.n, self.k)
+        #self.generate_weights(self.n, self.k)
+
+        self._distances = self._G._distances.numpy()
+        #self.distances = self.G._distances.to(device="cuda", copy=True)
+        
+        if self._n > 6000 and self._k > 2000:
             self._maxTime = 200
-        elif n > 6000 and k <= 2000:
+        elif self._n > 6000 and self._k <= 2000:
             self._maxTime = 100
-        elif n < 1000:
+        elif self._n < 1000:
             self._maxTime = 5
-        elif n > 1000 and k < 1000:
+        elif self._n > 1000 and self._k < 1000:
             self._maxTime = 10
-        elif n > 1000 and k >= 1000:
+        elif self._n > 1000 and self._k >= 1000:
             self._maxTime = 15
         else:
             self._maxTime = 15

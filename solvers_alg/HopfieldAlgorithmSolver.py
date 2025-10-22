@@ -12,7 +12,7 @@ FACILITY = 1
 CLIENT = 0
 
 class HopfieldAlgorithmSolver(KMPSolver):
-    def __init__(self, use_gpu, graph, n, k, solutions=None, search_tree_config=None):
+    def __init__(self, use_gpu, graph=None, n=None, k=None, solutions=None, search_tree_config=None):
         # Initialize Variables for Solver
         self._name = "Hopfield"
         self._solutionValue = 0
@@ -23,16 +23,10 @@ class HopfieldAlgorithmSolver(KMPSolver):
         self._k = k
         self._graph = graph
         self._search_tree_config = search_tree_config
-        self._num_rows = n
-        self._num_cols = n + 1
-        self._size = (self._num_rows, self._num_cols)
-        self._facility_update_value = 1.0
-        self._client_update_value = 1.0
-        
-        self._facility_length = n                   # This variable keeps track of how many facilities we are evaluating. 
-        self._facility_list = [i for i in range(n)] # this variable keeps track of the facilities we are evaluating
+
         self._neighbour_sets = {}                   # This keeps track of the specific facility neighbour groups
-        self._selected_row_cache = {}               # Cache the mapping from a facility to it's selected row group.
+        self._selected_row_cache = {}   
+
         self._use_gpu = use_gpu                     # CPU/GPU toggle 
 
         # If we select the GPU and cuda is not available, fail loudly.
@@ -42,14 +36,62 @@ class HopfieldAlgorithmSolver(KMPSolver):
         else:
             self._device = 'cpu'
 
+        # Caching the sorted list of a facility inner values in order to decrease the number of sort calls
+        self._sorted_facility_inner_values = None
+        self._sorted_facility_indices = None
+
+        self._num_rows = 0
+        self._num_cols = 0
+        self._size = None
+        self._facility_update_value = 1.0
+        self._client_update_value = 1.0
+
+        self._full_distance_values = None
+        self._distance_values = None
+
+        self._facility_length = 0
+        self._facility_list = None
+
+        # Value Tensors/Matrices
+        self._full_activation_values = None
+        self._activation_values = None
+        self._full_inner_values = None
+        self._inner_values = None
+        
+        # Constant Tensors/Matrices
+        self._client_addition_values = None
+        self._sparse_column_indices = None
+        
+        # we want the columns from 1 to the end of the array (i.e., only the client values)
+        self._math_column_indices = None
+        
+        # Test tensors to see if making comparisons on the GPU is faster
+        self._k_on_gpu = None
+        self._n_on_gpu = None
+        self._1_on_gpu = None
+
+        self._maxTime = 0
+
+    def initialize(self):
+        if self._graph is None or self._n is None or self._k is None:
+            raise ValueError("Graph, n, and k must be set before calling initialize().")
+        
+        self._num_rows = self._n
+        self._num_cols = self._n + 1
+        self._size = (self._num_rows, self._num_cols)
+        
+        self._facility_length = self._n                  # This variable keeps track of how many facilities we are evaluating. 
+        self._facility_list = [i for i in range(self._n)] # this variable keeps track of the facilities we are evaluating
+        
+        # Cache the mapping from a facility to it's selected row group.
         # The graph should contain a normalized torch array of distances.
         # Subtract 1 in order to prioritize smaller distances
         if self._use_gpu:
-            self._full_distance_values = 1 - graph._gpu_normalized_distances
+            self._full_distance_values = 1 - self._graph._gpu_normalized_distances
         else:
-            self._full_distance_values = torch.tensor(1 - graph._normalized_distances)
+            self._full_distance_values = torch.tensor(1 - self._graph._normalized_distances)
 
-            self._distance_values = None
+        self._distance_values = None
         
         # Value Tensors/Matrices
         self._full_activation_values = torch.empty(size=self._size, device=self._device)
@@ -69,22 +111,18 @@ class HopfieldAlgorithmSolver(KMPSolver):
         self._n_on_gpu = torch.tensor(self._n, device=self._device)
         self._1_on_gpu = torch.tensor(1.0, device=self._device)
         
-        # Caching the sorted list of a facility inner values in order to decrease the number of sort calls
-        self._sorted_facility_inner_values = None
-        self._sorted_facility_indices = None
-        
-        if n > 6000 and k > 2000:
-            self.maxTime = 200
-        elif n > 6000 and k <= 2000:
-            self.maxTime = 100
-        elif n < 1000:
-            self.maxTime = 5
-        elif n > 1000 and k < 1000:
-            self.maxTime = 10
-        elif n > 1000 and k >= 1000:
-            self.maxTime = 15
+        if self._n > 6000 and self._k > 2000:
+            self._maxTime = 200
+        elif self._n > 6000 and self._k <= 2000:
+            self._maxTime = 100
+        elif self._n < 1000:
+            self._maxTime = 5
+        elif self._n > 1000 and self._k < 1000:
+            self._maxTime = 10
+        elif self._n > 1000 and self._k >= 1000:
+            self._maxTime = 15
         else:
-            self.maxTime = 15
+            self._maxTime = 15
 
         
     def getName(self):
@@ -95,6 +133,19 @@ class HopfieldAlgorithmSolver(KMPSolver):
 
     def getSelectedFacilities(self):
         return self._selectedFacilities
+    
+    def setN(self, n):
+        self._n = n
+
+    def setK(self, k):
+        self._k = k
+
+    def setGraph(self, graph):
+        self._graph = graph
+        if self._use_gpu:
+            self._full_distance_values = 1 - graph._gpu_normalized_distances
+        else:
+            self._full_distance_values = torch.tensor(1 - graph._normalized_distances)
 
     def solve(self, starter_facilities=None):
     

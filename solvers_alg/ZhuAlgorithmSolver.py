@@ -23,29 +23,38 @@ class ZhuAlgorithmSolver(KMPSolver):
         self._p = 3
         self._intersection = []
 
+        self._solution = solution
+        self._vertices = None
+        
+        self._maxTime = 0
+
+    def initialize(self):
+        if self._graph is None or self._n is None or self._k is None:
+            raise ValueError("Graph, n, and k must be set before calling initialize().")
+        
         # prepare the initial vertices
-        if solution:
+        if self._solution:
             vertices = []
-            for i in range(n):
-                if i in solution:
+            for i in range(self._n):
+                if i in self._solution:
                     vertices.append(1)
                 else:
                     vertices.append(0)
         else:
-            vertices = [0 for _ in range(n)]
+            vertices = [0 for _ in range(self._n)]
             # randomly pick k vertices
-            for value in random.sample([i for i in range(0, n)], k=k):
+            for value in random.sample([i for i in range(0, self._n)], k=self._k):
                 vertices[value] = 1
 
         self._vertices = vertices
-        
-        if n > 6000:
+
+        if self._n > 6000:
             self._maxTime = 200
-        elif n < 1000:
+        elif self._n < 1000:
             self._maxTime = 5
-        elif n > 1000 and k < 1000:
+        elif self._n > 1000 and self._k < 1000:
             self._maxTime = 10
-        elif n > 1000 and k >= 1000:
+        elif self._n > 1000 and self._k >= 1000:
             self._maxTime = 15
         else:
             self._maxTime = 15
@@ -58,6 +67,15 @@ class ZhuAlgorithmSolver(KMPSolver):
     
     def getSolutionValue(self):
         return self._solutionValue
+    
+    def setN(self, n):
+        self._n = n
+
+    def setK(self, k):
+        self._k = k
+
+    def setGraph(self, graph):
+        self._graph = graph
     
     def solve(self):
     

@@ -10,7 +10,7 @@ class FLSolver(Solver):
     def getName(self):
         return self.name
 
-    def solve(self, graph, n, k):
+    def solve(self):
         raise NotImplementedError
 
     def getSolutionValue(self):
@@ -18,3 +18,9 @@ class FLSolver(Solver):
 
     def getSelectedFacilities(self):
         return self.selectedFacilities
+    
+    def setN(self, n):
+        self._n = n
+
+    def setGraph(self, graph):
+        self._graph = graph

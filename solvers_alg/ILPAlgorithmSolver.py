@@ -16,8 +16,25 @@ class ILPAlgorithmSolver(KMPSolver):
         self._k = k
         self._model = pulp.LpProblem(name="facility-location-problem", sense=pulp.LpMinimize)
         # store the client and facility indices to make future lines easier to read
-        self._clients = [str(i) for i in range(n)]
-        self._facilities = [str(i) for i in range(n)]
+        self._clients = None
+        self._facilities = None
+        # this dictionary contains the values for the distance from u to v
+        self._d = None
+        # Connection variables - X[u][v] is 1 if client u is connected to facility v
+        #self.X = pulp.LpVariable.dict("Connections", (self.clients, self.facilities), 0, 1, "Integer")
+        self._X = None
+        # Facility variables - F[i] is 1 if facility i is selected
+        #self.F = pulp.LpVariable.dict("Facilities", self.facilities, 0, 1, "Integer")
+        self._F = None
+        # add the objective function
+        #self.model += pulp.lpSum(self.d[u][v] * self.X[(u, v)] for u in self.clients for v in self.facilities if self.F[v] == 1.0)
+
+    def initialize(self):
+        if self._graph is None or self._n is None or self._k is None:
+            raise ValueError("Graph, n, and k must be set before calling initialize().")
+        # store the client and facility indices to make future lines easier to read
+        self._clients = [str(i) for i in range(self._n)]
+        self._facilities = [str(i) for i in range(self._n)]
         # this dictionary contains the values for the distance from u to v
         self._d = pulp.makeDict([self._clients, self._facilities], self.calculate_distances())
         # Connection variables - X[u][v] is 1 if client u is connected to facility v
@@ -45,6 +62,15 @@ class ILPAlgorithmSolver(KMPSolver):
     
     def getSelectedFacilities(self):
         return self._selectedFacilities
+    
+    def setN(self, n):
+        self._n = n
+
+    def setK(self, k):
+        self._k = k
+
+    def setGraph(self, graph):
+        self._graph = graph
 
     def solve(self, max_time=None):
         self.model.solve(solver=pulp.PULP_CBC_CMD(msg=False, timeLimit=max_time))

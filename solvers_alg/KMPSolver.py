@@ -10,7 +10,7 @@ class KMPSolver(Solver):
     def getName(self):
         return self.name
 
-    def solve(self, graph, n, k):
+    def solve(self):
         raise NotImplementedError
 
     def getSolutionValue(self):
@@ -18,3 +18,12 @@ class KMPSolver(Solver):
 
     def getSelectedFacilities(self):
         return self.selectedFacilities
+    
+    def setN(self, n):
+        self._n = n
+
+    def setK(self, k):
+        self._k = k
+
+    def setGraph(self, graph):
+        self._graph = graph

@@ -7,7 +7,7 @@ from solvers_alg.KMPSolver import KMPSolver
 
 
 class DominguezAlgorithmSolver(KMPSolver):
-    def __init__(self, n, k, graph, use_gpu):
+    def __init__(self, n=None, k=None, graph=None, use_gpu=False):
         # Initialize Variables for Solver
         self._name = "Dominguez"
         self._solutionValue = 0
@@ -17,16 +17,24 @@ class DominguezAlgorithmSolver(KMPSolver):
         self._n = n
         self._k = k
         self._graph = graph
-        self._size = (n, k)
+
+        self._vertices = None
         
-        self._distanceValues = graph._normalized_distances.detach().clone()
+    def initialize(self):
+
+        if self._graph is None or self._n is None or self._k is None:
+            raise ValueError("Graph, n, and k must be set before calling initialize().")
+        
+        self._size = (self._n, self._k)
+        
+        self._distanceValues = self._graph._normalized_distances.detach().clone()
         self._facilityAssignments = torch.zeros(self._size)
         self._clientAssignments = torch.zeros(self._size)
         
-        self._mathRowIndices = torch.arange(n)
-        self._mathColIndices = torch.arange(k)
+        self._mathRowIndices = torch.arange(self._n)
+        self._mathColIndices = torch.arange(self._k)
         
-        self._vertices = [0] * n
+        self._vertices = [0] * self._n
         
         """
         if self.verbose is True:
@@ -34,7 +42,7 @@ class DominguezAlgorithmSolver(KMPSolver):
             print(self.distanceValues)
             print()
         """
-        for i in range(n):
+        for i in range(self._n):
             self._vertices[i] = 0
 
     def getName(self):
@@ -45,6 +53,18 @@ class DominguezAlgorithmSolver(KMPSolver):
     
     def getSolutionValue(self):
         return self._solutionValue
+    
+    def setN (self, n):
+        self._n = n
+
+    def setK (self, k):
+        self._k = k
+
+    def setGraph (self, graph):
+        self._graph = graph
+
+    def setMaxTime (self, max_time):
+        self._maxTime = max_time
     
     def solve(self):
         best_facilities = None

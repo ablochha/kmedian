@@ -21,9 +21,9 @@ class HopfieldOriginalSolver(KMPSolver):
         self._n = n
         self._k = k
         self._graph = graph
-        self._num_rows = n
-        self._num_cols = k
-        self._size = (self._num_rows, self._num_cols)
+        self._num_rows = 0
+        self._num_cols = 0
+        self._size = None
         self._facility_update_value = 1.0
         self._client_update_value = 1.0
 
@@ -37,15 +37,49 @@ class HopfieldOriginalSolver(KMPSolver):
         else:
             self._device = 'cpu' 
           
+        self._full_distance_values = None
+        self._distance_values = None
+        
+        # These are the two sets of 2nk neurons
+        self._facility_inner_values = None
+        self._client_inner_values = None
+        self._facility_activation_values = None
+        self._client_activation_values = None
+        
+        # This is required for evaluating the n-(k+1) candidate facilities
+        self._candidatefacility_inner_values = None
+        
+        # These are 1D arrays that have been convenient so far (but not sure if needed)
+        self._math_row_indices = None
+        self._k_indices = None
+        self._facilities = None
+        self._active_facility_list = []
+        
+        # Caching the sorted list of a facility inner values in order to decrease the number of sort calls
+        self._sorted_facility_inner_values = None
+        self._sorted_facility_indices = None
+        
+        #self.facility_col = torch.zeros(self._n, device=self._device)
+        #self.D_cols = torch.zeros((self._n, self._n - k + 1), device=self._device)
+        #self.D_rr = torch.zeros((self._n - k + 1, self._n - k + 1), device=self._device)
+
+    def initialize(self):
+        if self._graph is None or self._n is None or self._k is None:
+            raise ValueError("Graph, n, and k must be set before calling initialize().")
+        
+        self._num_rows = self._n
+        self._num_cols = self._k
+        self._size = (self._num_rows, self._num_cols)
+
         # The graph should contain a normalized torch array of distances.
         # Subtract 1 in order to prioritize smaller distances
         if self._use_gpu:
-            self._full_distance_values = 1 - graph._gpu_normalized_distances
+            self._full_distance_values = 1 - self._graph._gpu_normalized_distances
         else:
-            self._full_distance_values = (1 - graph._normalized_distances).clone().detach()
-              
-        self._distance_values = self._full_distance_values
+            self._full_distance_values = (1 - self._graph._normalized_distances).clone().detach()
         
+        self._distance_values = self._full_distance_values
+
         # These are the two sets of 2nk neurons
         self._facility_inner_values = torch.zeros(size=self._size, device=self._device)
         self._client_inner_values = torch.zeros(size=self._size, device=self._device)
@@ -59,15 +93,6 @@ class HopfieldOriginalSolver(KMPSolver):
         self._math_row_indices = torch.arange(start=0, end=self._n, device=self._device)
         self._k_indices = torch.arange(start=0, end=self._k, device=self._device)
         self._facilities = torch.zeros(size=(1,self._num_rows), dtype=torch.int, device=self._device)
-        self._active_facility_list = []
-        
-        # Caching the sorted list of a facility inner values in order to decrease the number of sort calls
-        self._sorted_facility_inner_values = None
-        self._sorted_facility_indices = None
-        
-        #self.facility_col = torch.zeros(self._n, device=self._device)
-        #self.D_cols = torch.zeros((self._n, self._n - k + 1), device=self._device)
-        #self.D_rr = torch.zeros((self._n - k + 1, self._n - k + 1), device=self._device)
 
     def getName(self):
         return self._name
@@ -78,8 +103,16 @@ class HopfieldOriginalSolver(KMPSolver):
     def getSolutionValue(self):
         return self._solutionValue
     
+    def setN(self, n):
+        self._n = n
+
+    def setK(self, k):
+        self._k = k
+
+    def setGraph(self, graph):
+        self._graph = graph
+    
     def run(self, starter_facilities=None):
-                   
         best_facilities = starter_facilities
         best_distance = calculate_distance(self._graph, best_facilities, self._n) if starter_facilities else None
 
