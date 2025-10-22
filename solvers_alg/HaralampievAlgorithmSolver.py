@@ -170,6 +170,15 @@ class HaralampievAlgorithmSolver(KMPSolver):
     def getSelectedFacilities(self):
         return self._selectedFacilities
     
+    def setN(self, n):
+        self._n = n
+
+    def setK(self, k):
+        self._k = k
+
+    def setGraph(self, graph):
+        self._G = graph
+    
     def solve(self):
         warm_instance = RandomChoiceAlgorithm()
         warm_solution = warm_instance.run(self._G, self._n, self._k)
@@ -344,7 +353,7 @@ class HaralampievAlgorithmSolver(KMPSolver):
         # Calculate the unit value and cache it
         else:
             # TODO - might be able to use the on values directly here
-            facility_start = (self._n * self._k) + (facility_group * self.n)
+            facility_start = (self._n * self._k) + (facility_group * self._n)
             facility_end = facility_start + self._n
             facility_values = self._V[facility_start:facility_end]
             client_location = X // self._k

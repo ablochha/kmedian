@@ -89,7 +89,7 @@ class LocalSearchSolver(KMPSolver):
         best_distance = self.calculate_distance()
         while True:
             has_swapped = False
-            for client in range(self._):
+            for client in range(self._n):
                 if self._vertices[client] == 0:
                     self._check_counter += 1
                     # check every possible swap
@@ -103,7 +103,7 @@ class LocalSearchSolver(KMPSolver):
                             # if our change in distance reaches a certain threshold we stop.
                             # We use the formula from 'Effectiveness of Local Search for Geometric Optimization'
                             # (Cohen-Addad and Mathieu 2015).
-                            if new_distance < (1 - (1 / self.n)) * best_distance:
+                            if new_distance < (1 - (1 / self._n)) * best_distance:
                                 best_distance = new_distance
                                 has_swapped = True
                                 break

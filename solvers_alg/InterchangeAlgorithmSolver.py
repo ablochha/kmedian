@@ -26,8 +26,6 @@ class InterchangeAlgorithmSolver(KMPSolver):
         #fast interchange tensors
         self._gain = None
         self._loss = None
-        closest_values, closest_indices = None
-        closest_values = None
         self._d1 = None
         self._d1_indices = None
         self._d2 = None

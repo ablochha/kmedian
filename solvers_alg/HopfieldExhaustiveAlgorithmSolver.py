@@ -161,38 +161,11 @@ class HopfieldExhaustiveAlgorithmSolver(KMPSolver):
         self._active_facility_list = []
         
         index = 0
-        if self._k > 2:
-            available_list = [i for i in range(self._n)]
-            num = self._k
-            if self._k > 3:
-                for i in range(min(self._k - 3, int(self._k*0.9))):
-                    value = self._sorted_facility_indices[self._n - i - 1].item()
-                    self._facility_activation_values[value, index] = 1
-                    available_list.remove(value)
-                    self._facilities[0, value] = 1
-                    self._active_facility_list.append(value)
-                    num = num - 1
-                    index = index + 1
-            else:
-                for i in range(min(self._k - 2, int(self._k*0.9))):
-                    value = self._sorted_facility_indices[self._n - i - 1].item()
-                    self._facility_activation_values[value, index] = 1
-                    available_list.remove(value)
-                    self._facilities[0, value] = 1
-                    self._active_facility_list.append(value)
-                    num = num - 1
-                    index = index + 1 
-            for value in random.sample(available_list, num):
-                self._facility_activation_values[value, index] = 1
-                self._facilities[0,value] = 1
-                self._active_facility_list.append(value)
-                index = index + 1
-        else:
-            for value in random.sample([i for i in range(0, self._n)], k=self._k):
-                self._facility_activation_values[value, index] = 1
-                self._facilities[0,value] = 1
-                self._active_facility_list.append(value)
-                index = index + 1
+        for value in random.sample([i for i in range(0, self._n)], k=self._k):
+            self._facility_activation_values[value, index] = 1
+            self._facilities[0,value] = 1
+            self._active_facility_list.append(value)
+            index = index + 1
         
         self._calculate_client_values()
         self._update_client()

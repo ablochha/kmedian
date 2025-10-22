@@ -39,7 +39,7 @@ def run_tests(algorithm, dataset, use_gpu):
         pmed_path = os.path.join(path, "datasets")
         return tsplib_utils.run_tests(pmed_path, algorithm, use_gpu)
     elif dataset == "6":
-    	print("\nTesting algorithm {algorithm.getName()} on dataset Special")
+    	print(f"\nTesting algorithm {algorithm.getName()} on dataset Special")
     	path = os.getcwd()
     	special_path = os.path.join(path, "datasets")
     	return special_utils.run_tests(special_path, algorithm, use_gpu)

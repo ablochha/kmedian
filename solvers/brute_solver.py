@@ -97,6 +97,6 @@ def get_facilities(h, n, k):
     for j in range(k):
         for s in range(n):
             index = (n * k) + s + (j * n)
-            if h.V[index] == 1:
+            if h._V[index] == 1:
                 facilities.add(s)
     return list(facilities)

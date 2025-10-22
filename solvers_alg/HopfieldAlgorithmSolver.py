@@ -12,7 +12,7 @@ FACILITY = 1
 CLIENT = 0
 
 class HopfieldAlgorithmSolver(KMPSolver):
-    def __init__(self, use_gpu, graph=None, n=None, k=None, solutions=None, search_tree_config=None):
+    def __init__(self, use_gpu, graph=None, n=None, k=None, search_tree_config=None):
         # Initialize Variables for Solver
         self._name = "Hopfield"
         self._solutionValue = 0
@@ -23,6 +23,15 @@ class HopfieldAlgorithmSolver(KMPSolver):
         self._k = k
         self._graph = graph
         self._search_tree_config = search_tree_config
+
+        self._num_rows = 0
+        self._num_cols = 0
+        self._size = None
+        self._facility_update_value = 1.0
+        self._client_update_value = 1.0
+
+        self._facility_length = 0
+        self._facility_list = None
 
         self._neighbour_sets = {}                   # This keeps track of the specific facility neighbour groups
         self._selected_row_cache = {}   
@@ -36,21 +45,8 @@ class HopfieldAlgorithmSolver(KMPSolver):
         else:
             self._device = 'cpu'
 
-        # Caching the sorted list of a facility inner values in order to decrease the number of sort calls
-        self._sorted_facility_inner_values = None
-        self._sorted_facility_indices = None
-
-        self._num_rows = 0
-        self._num_cols = 0
-        self._size = None
-        self._facility_update_value = 1.0
-        self._client_update_value = 1.0
-
         self._full_distance_values = None
         self._distance_values = None
-
-        self._facility_length = 0
-        self._facility_list = None
 
         # Value Tensors/Matrices
         self._full_activation_values = None
@@ -69,6 +65,10 @@ class HopfieldAlgorithmSolver(KMPSolver):
         self._k_on_gpu = None
         self._n_on_gpu = None
         self._1_on_gpu = None
+
+        # Caching the sorted list of a facility inner values in order to decrease the number of sort calls
+        self._sorted_facility_inner_values = None
+        self._sorted_facility_indices = None
 
         self._maxTime = 0
 
@@ -90,14 +90,10 @@ class HopfieldAlgorithmSolver(KMPSolver):
             self._full_distance_values = 1 - self._graph._gpu_normalized_distances
         else:
             self._full_distance_values = torch.tensor(1 - self._graph._normalized_distances)
-
-        self._distance_values = None
         
         # Value Tensors/Matrices
         self._full_activation_values = torch.empty(size=self._size, device=self._device)
-        self._activation_values = None
         self._full_inner_values = torch.empty(size=self._size, device=self._device)
-        self._inner_values = None
         
         # Constant Tensors/Matrices
         self._client_addition_values = torch.full(fill_value=self._client_update_value * 2, size=(self._n,), device=self._device)
@@ -142,10 +138,6 @@ class HopfieldAlgorithmSolver(KMPSolver):
 
     def setGraph(self, graph):
         self._graph = graph
-        if self._use_gpu:
-            self._full_distance_values = 1 - graph._gpu_normalized_distances
-        else:
-            self._full_distance_values = torch.tensor(1 - graph._normalized_distances)
 
     def solve(self, starter_facilities=None):
     
@@ -186,7 +178,7 @@ class HopfieldAlgorithmSolver(KMPSolver):
             
             current_time = time.time()
         
-            if current_time - start_time >= self.maxTime:
+            if current_time - start_time >= self._maxTime:
                 break
         
             if update_type == FACILITY:
@@ -278,7 +270,7 @@ class HopfieldAlgorithmSolver(KMPSolver):
             completed += 1
 
         #print(completed)
-        self._selectedFacilities, self._solutionValue = self._calculate_facilities_and_distance
+        self._selectedFacilities, self._solutionValue = best_facilities, best_distance
 
     def _initialize_per_run_arrays(self, best_facilities, search_size, exclude_original):
     
