@@ -112,7 +112,7 @@ class HopfieldOriginalSolver(KMPSolver):
     def setGraph(self, graph):
         self._graph = graph
     
-    def run(self, starter_facilities=None):
+    def solve(self, starter_facilities=None):
         best_facilities = starter_facilities
         best_distance = calculate_distance(self._graph, best_facilities, self._n) if starter_facilities else None
 

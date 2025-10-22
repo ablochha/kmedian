@@ -15,31 +15,31 @@ def run_tests(algorithm, dataset, use_gpu):
 
     # Random-small
     if dataset == "1":
-        print(f"\nTesting algorithm {algorithm.name()} on dataset Random-Small")
+        print(f"\nTesting algorithm {algorithm.getName()} on dataset Random-Small")
         tests = loader.load_dataset(loader.RANDOM)
         return run_dataset_tests(algorithm, tests, use_gpu)
     elif dataset == "2":
-        print(f"\nTesting algorithm {algorithm.name()} on dataset Random-Large")
+        print(f"\nTesting algorithm {algorithm.getName()} on dataset Random-Large")
         tests = loader.load_dataset(loader.RANDOM_HUGE)
         return run_dataset_tests(algorithm, tests, use_gpu)
     elif dataset == "3":
-        print(f"\nTesting algorithm {algorithm.name()} on dataset USCA312")
+        print(f"\nTesting algorithm {algorithm.getName()} on dataset USCA312")
         tests = loader.load_dataset(loader.USCA312)
         return run_dataset_tests(algorithm, tests, use_gpu)
     elif dataset == "4":
-        print(f"\nTesting algorithm {algorithm.name()} on dataset P-Median")
+        print(f"\nTesting algorithm {algorithm.getName()} on dataset P-Median")
         # get current directory and then add the dataset to the path
         path = os.getcwd()
         pmed_path = os.path.join(path, "datasets")
         return pmed_utils.run_tests(pmed_path, algorithm, use_gpu)
     elif dataset == "5":
-        print(f"\nTesting algorithm {algorithm.name()} on dataset TSPLib")
+        print(f"\nTesting algorithm {algorithm.getName()} on dataset TSPLib")
         # get current directory and then add the dataset to the path
         path = os.getcwd()
         pmed_path = os.path.join(path, "datasets")
         return tsplib_utils.run_tests(pmed_path, algorithm, use_gpu)
     elif dataset == "6":
-    	print("\nTesting algorithm {algorithm.name()} on dataset Special")
+    	print("\nTesting algorithm {algorithm.getName()} on dataset Special")
     	path = os.getcwd()
     	special_path = os.path.join(path, "datasets")
     	return special_utils.run_tests(special_path, algorithm, use_gpu)
