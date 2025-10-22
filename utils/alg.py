@@ -1,13 +1,21 @@
-from solvers_alg import (AryaMultiSolver, CohenAddadMultiSolver,
-                         CohenAddadSolver, DominguezAlgorithmSolver,
-                         HaralampievAlgorithmSolver, HopfieldAlgorithmSolver,
-                         HopfieldBestHalfMultiAlgorithmSolver,
-                         HopfieldBestHalfSecondClosestAlgorithmSolver,
-                         HopfieldBestHalfSingleSolver,
-                         HopfieldExhaustiveAlgorithmSolver,
-                         HopfieldOriginal2nkSolver, ILPAlgorithmSolver,
-                         InterchangeAlgorithmSolver, LocalSearchSolver,
-                         ZhuAlgorithmSolver)
+from solvers_alg.AryaMultiSolver import AryaMultiSolver
+from solvers_alg.CohenAddadMultiSolver import CohenAddadMultiSolver
+from solvers_alg.CohenAddadSolver import CohenAddadSolver
+from solvers_alg.DominguezAlgorithmSolver import DominguezAlgorithmSolver
+from solvers_alg.HaralampievAlgorithmSolver import HaralampievAlgorithmSolver
+from solvers_alg.HopfieldAlgorithmSolver import HopfieldAlgorithmSolver
+from solvers_alg.HopfieldBestHalfMultiAlgorithmSolver import \
+    HopfieldBestHalfMultiSolver
+from solvers_alg.HopfieldBestHalfSecondClosestAlgorithmSolver import \
+    HopfieldBestHalfSecondClosestAlgorithmSolver
+from solvers_alg.HopfieldBestHalfSingleSolver import \
+    HopfieldBestHalfSingleSolver
+from solvers_alg.HopfieldExhaustiveAlgorithmSolver import \
+    HopfieldExhaustiveAlgorithmSolver
+from solvers_alg.HopfieldOriginal2nkSolver import HopfieldOriginalSolver
+from solvers_alg.InterchangeAlgorithmSolver import InterchangeAlgorithmSolver
+from solvers_alg.LocalSearchSolver import LocalSearchSolver
+from solvers_alg.ZhuAlgorithmSolver import ZhuAlgorithmSolver
 
 
 def arguments_to_algorithm(args):
@@ -44,7 +52,7 @@ def arguments_to_algorithm(args):
         
     elif args["algorithm"] == "8":
         runs = args["parameters"]["runs"]
-        return HopfieldOriginal2nkSolver(use_gpu=args["use_gpu"])
+        return HopfieldOriginalSolver(use_gpu=args["use_gpu"])
         
     elif args["algorithm"] == "9":
         runs = args["parameters"]["runs"]
@@ -52,7 +60,7 @@ def arguments_to_algorithm(args):
         
     elif args["algorithm"] == "10":
         runs = args["parameters"]["runs"]
-        return HopfieldBestHalfMultiAlgorithmSolver(use_gpu=args["use_gpu"])
+        return HopfieldBestHalfMultiSolver(use_gpu=args["use_gpu"])
         
     elif args["algorithm"] == "11":
         runs = args["parameters"]["runs"]
