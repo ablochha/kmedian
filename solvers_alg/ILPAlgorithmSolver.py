@@ -5,7 +5,7 @@ from solvers_alg.KMPSolver import KMPSolver
 
 
 class ILPAlgorithmSolver(KMPSolver):
-    def __init__(self, graph, n, k):
+    def __init__(self, graph=None, n=None, k=None):
         # Initialize Variables for Solver
         self._name = "ILPSolver"
         self._solutionValue = 0

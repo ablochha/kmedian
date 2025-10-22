@@ -9,7 +9,7 @@ from solvers_alg.KMPSolver import KMPSolver
 
 
 class InterchangeAlgorithmSolver(KMPSolver):
-    def __init__(self, n, k, graph, use_gpu):
+    def __init__(self, use_gpu, n=None, k=None, graph=None):
         # Initialize Variables for Solver
         self._name = "Fast Interchange"
         self._solutionValue = 0

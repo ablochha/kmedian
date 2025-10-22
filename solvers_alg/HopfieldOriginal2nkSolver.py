@@ -11,7 +11,7 @@ FACILITY = 1
 CLIENT = 0
 
 class HopfieldOriginalSolver(KMPSolver):
-    def __init__(self, n, k, graph, use_gpu):
+    def __init__(self, use_gpu, n=None, k=None, graph=None):
         # Initialize Variables for Solver
         self._name = "Hopfield (original 2nk)"
         self._solutionValue = 0

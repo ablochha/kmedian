@@ -2,13 +2,14 @@ import os
 import time
 
 import numpy as np
+from tabulate import tabulate
 
 from datasets import loader
 from datasets.pmed import pmed_utils
-from datasets.tsplib import tsplib_utils
 from datasets.special import special_utils
+from datasets.tsplib import tsplib_utils
 from solvers.brute_solver import calculate_distance
-from tabulate import tabulate
+
 
 def run_tests(algorithm, dataset, use_gpu):
 
@@ -70,7 +71,12 @@ def run_dataset_tests(algorithm_instance, tests, use_gpu):
                 optimal_distance = test_data["distance"]
 
                 start_time = time.time()
-                facilities = algorithm_instance.run(graph, n, k)
+                algorithm_instance.setN(n)
+                algorithm_instance.setK(k)
+                algorithm_instance.setGraph(graph)
+                algorithm_instance.initialize()
+                algorithm_instance.solve()
+                facilities = algorithm_instance.getSelectedFacilities()
                 end_time = time.time()
                 elapsedTime = end_time - start_time
                 times.append(elapsedTime)

@@ -20,8 +20,14 @@ def run_tests(dataset_folder_path, algorithm_instance, use_gpu):
         graph = DistanceGraph(distances, use_gpu)
         optimal_distance = test_data['distance']
 
+        algorithm_instance.setN(n)
+        algorithm_instance.setK(k)
+        algorithm_instance.setGraph(graph)
+        algorithm_instance.initialize()
+
         start_time = time.time()
-        facilities = algorithm_instance.run(graph, n, k)
+        algorithm_instance.solve()
+        facilities = algorithm_instance.getSelectedFacilities()
         end_time = time.time()
         total_time = end_time - start_time
 

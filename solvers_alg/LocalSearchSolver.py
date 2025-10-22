@@ -8,7 +8,7 @@ from solvers_alg.KMPSolver import KMPSolver
 
 
 class LocalSearchSolver(KMPSolver):
-    def __init__(self, graph, n, k, max_time, solution=None ):
+    def __init__(self, max_time, graph=None, n=None, k=None, solution=None):
         # Initialize Variables for Solver
         self._name = "Local Search"
         self._solutionValue = 0
