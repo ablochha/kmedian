@@ -142,28 +142,27 @@ class HopfieldAlgorithmSolver(KMPSolver):
     def solve(self, starter_facilities=None):
     
         if self._search_tree_config is not None:
-            search_agent = SearchAgent(self._n,
-                                       self._k,
-                                       self._search_tree_config['epsilon'],
-                                       self._search_tree_config['exclude'],
-                                       self._search_tree_config['fixed_size'])
-                                       
+            search_agent = SearchAgent(
+                self._n,
+                self._k,
+                self._search_tree_config['epsilon'],
+                self._search_tree_config['exclude'],
+                self._search_tree_config['fixed_size'])
         else:
             search_agent = SearchAgent(self._n, self._k)
-            
+
         best_facilities = starter_facilities
         best_distance = calculate_distance(self._graph, best_facilities, self._n) if starter_facilities else None
 
-        completed = 0
         import time
         start_time = time.time()
         max_time = 235
-                
-        # Initialize our per run variables.
+
+        # ---- single run start ----
         next_facilities, level, search_size, exclude_original = search_agent.get_facility_group()
         self._initialize_per_run_arrays(next_facilities, search_size, exclude_original)
 
-        # Since we start with a facility update we need to sort the facility values at the start
+        # sort facilities at the start
         self._sorted_facility_inner_values, self._sorted_facility_indices = torch.sort(self._inner_values[:, 0])
         self._sorted_facility_inner_values = self._sorted_facility_inner_values[-self._k:]
         self._sorted_facility_indices = self._sorted_facility_indices[-self._k:]
@@ -171,106 +170,58 @@ class HopfieldAlgorithmSolver(KMPSolver):
         bandit = ChangeBandit(self._facility_length, 0.05)
         facility_stabilized = False
 
-        # start the loop with a Facility update.
         update_type = FACILITY
-        
+
         while not facility_stabilized:
-            
             current_time = time.time()
-        
             if current_time - start_time >= self._maxTime:
                 break
-        
+
             if update_type == FACILITY:
-            
                 facility = bandit.get_action()
-                #print("Facility Update: ", facility)
-                
                 has_changed = self._update_facility(facility)
-                #print("Activation value changed: ", has_changed)
-                #print("These are the current inner values")
-                #print(self._inner_values)
-                #print("")
-                #print("These are the current activation values")
-                #print(self._activation_values)                  
-                #print("")  
-                
+
                 if has_changed:
-                
                     bandit.update_action(facility, 1)
-                    
-                    # Once the client nodes have stabilized they are not likely to move
-                    update_type = CLIENT #if not client_stabilized else FACILITY
+                    update_type = CLIENT
                     self._calculate_client_values()
-                    #print("Since a facility's activation value was changed, the inner values are re-calculated")
-                    #print(self._inner_values)
-                    #print("")
                     facility_stabilized = self._is_stabilized_facility()
-                    #print("Calculate if facilities are stable...: ")
-                    #print(facility_stabilized)
-                    #print("")
-                    
                 else:
-                
-                    #print("A facility's activation value was not changed, so another facility update will occur")
-                    #print("")
                     bandit.update_action(facility, 0)
                     update_type = FACILITY
 
             else:
-            
                 has_changed = self._update_client()
-                #print("Client Update")
-                #print("Client activation values changed: ", has_changed)
-                #print("These are the current inner values")
-                #print(self._inner_values)
-                #print("")
-                #print("These are the current activation values")
-                #print(self._activation_values)
-                #print("")
-                
-                
+
                 if has_changed:
-                
-                    #print("Since a client's activation value was changed, the inner values are re-calculated")
                     self._calculate_facility_values()
-                    #print("New inner values after updating the client activation value")
-                    #print(self._inner_values)
-                    #print("")
-                    # changing the client activation values will initiate a new sort of facilities
-                    
                     self._sorted_facility_inner_values, self._sorted_facility_indices = torch.sort(self._inner_values[:, 0])
                     self._sorted_facility_inner_values = self._sorted_facility_inner_values[-self._k:]
                     self._sorted_facility_indices = self._sorted_facility_indices[-self._k:]
-                    #print("The facilities with the top k inner values are:")
-                    #print(self._sorted_facility_indices)
-                    
                 update_type = FACILITY
 
-            selected_facilities, selected_distance = self._calculate_facilities_and_distance()
+        selected_facilities, selected_distance = self._calculate_facilities_and_distance()
 
-            # update the search agent
-            search_agent.update_facility_group(next_facilities, level, selected_facilities, selected_distance)
+        # update search agent and best solution
+        search_agent.update_facility_group(next_facilities, level, selected_facilities, selected_distance)
 
-            # update our best value
-            if best_distance is None or selected_distance < best_distance:
-            
-                if best_distance is None:
+        if best_distance is None or selected_distance < best_distance:
+
+            if best_distance is None:
                 
-                    pass
+                pass
                     
-                else:
+            else:
                 
-                    new_ratio = round(best_distance / selected_distance, 3)
-                    #print(f"{r}: {selected_distance} - {new_ratio}")
-                    
-                best_distance = selected_distance
-                best_facilities = selected_facilities
+                new_ratio = round(best_distance / selected_distance, 3)
+                #print(f"{r}: {selected_distance} - {new_ratio}")
 
-            completed += 1
+            best_distance = selected_distance
+            best_facilities = selected_facilities
 
-        #print(completed)
-        self._selectedFacilities, self._solutionValue = best_facilities, best_distance
+        # ---- single run end ----
+        self._selectedFacilities = best_facilities
+        self._solutionValue = best_distance
 
     def _initialize_per_run_arrays(self, best_facilities, search_size, exclude_original):
     
