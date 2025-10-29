@@ -7,7 +7,7 @@ class InputReader(ABC):
         self._next = None
 
     @abstractmethod
-    def set_next(self, next):
+    def setNext(self, next):
         self._next = next
         return next
     
