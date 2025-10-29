@@ -3,6 +3,7 @@ import random
 import numpy as np
 import torch
 
+from problems.KMProblem import KMProblem
 from solvers.brute_solver import calculate_distance
 from solvers_alg.KMPSolver import KMPSolver
 
@@ -11,16 +12,16 @@ FACILITY = 1
 CLIENT = 0
 
 class HopfieldOriginalSolver(KMPSolver):
-    def __init__(self, use_gpu, n=None, k=None, graph=None):
+    def __init__(self, use_gpu, problem:KMProblem):
         # Initialize Variables for Solver
         self._name = "Hopfield (original 2nk)"
         self._solutionValue = 0
         self._selectedFacilities = []
 
         self.verbose = False
-        self._n = n
-        self._k = k
-        self._graph = graph
+        self._n = problem.getN()
+        self._k = problem.getK()
+        self._graph = problem.getGraph()
         self._num_rows = 0
         self._num_cols = 0
         self._size = None

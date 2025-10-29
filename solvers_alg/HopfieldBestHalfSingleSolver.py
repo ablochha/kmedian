@@ -3,24 +3,27 @@ import random
 import numpy as np
 import torch
 
+from problems.KMProblem import KMProblem
 from solvers.brute_solver import calculate_distance
 from solvers_alg.KMPSolver import KMPSolver
 
 
 class HopfieldBestHalfSingleSolver(KMPSolver):
-    def __init__(self, use_gpu, n=None, k=None, graph=None):
+    def __init__(self, use_gpu, problem:KMProblem, runNum):
         # Initialize Variables for Solver
         self._name = "Hopfield 2nk Best Half Single"
         self._solutionValue = 0
         self._selectedFacilities = []
 
         self.verbose = False
-        self._n = n
-        self._k = k
-        self._graph = graph
+        self._n = problem.getN()
+        self._k = problem.getN()
+        self._graph = problem.getGraph()
         self._num_rows = None
         self._num_cols = None
         self._size = None
+
+        self._runNum = runNum
 
         # CPU/GPU toggle              
         self._use_gpu = use_gpu                      
@@ -344,11 +347,38 @@ class HopfieldBestHalfSingleSolver(KMPSolver):
         self._active_facility_list = []
         
         index = 0
-        for value in random.sample([i for i in range(0, self._n)], k=self._k):
-            self._facility_activation_values[value, index] = 1
-            self._facilities[0,value] = 1
-            self._active_facility_list.append(value)
-            index = index + 1
+        if self._k > 2 and self._runNum > 0:
+            available_list = [i for i in range(self._n)]
+            num = self._k
+            if self._k > 3:
+                for i in range(min(self._k - 3, int(self._k*0.9))):
+                    value = self._sorted_facility_indices[self._n - i - 1].item()
+                    self._facility_activation_values[value, index] = 1
+                    available_list.remove(value)
+                    self._facilities[0, value] = 1
+                    self._active_facility_list.append(value)
+                    num = num - 1
+                    index = index + 1
+            else:
+                for i in range(min(self._k - 2, int(self._k*0.9))):
+                    value = self._sorted_facility_indices[self._n - i - 1].item()
+                    self._facility_activation_values[value, index] = 1
+                    available_list.remove(value)
+                    self._facilities[0, value] = 1
+                    self._active_facility_list.append(value)
+                    num = num - 1
+                    index = index + 1 
+            for value in random.sample(available_list, num):
+                self._facility_activation_values[value, index] = 1
+                self._facilities[0,value] = 1
+                self._active_facility_list.append(value)
+                index = index + 1
+        else:
+            for value in random.sample([i for i in range(0, self._n)], k=self._k):
+                self._facility_activation_values[value, index] = 1
+                self._facilities[0,value] = 1
+                self._active_facility_list.append(value)
+                index = index + 1
             
         self._calculate_client_values()
         self._update_client()

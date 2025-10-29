@@ -1,19 +1,20 @@
 import pulp
 
+from problems.KMProblem import KMProblem
 from solvers.brute_solver import calculate_distance
 from solvers_alg.KMPSolver import KMPSolver
 
 
 class ILPAlgorithmSolver(KMPSolver):
-    def __init__(self, graph=None, n=None, k=None):
+    def __init__(self, problem:KMProblem):
         # Initialize Variables for Solver
         self._name = "ILPSolver"
         self._solutionValue = 0
         self._selectedFacilities = []
 
-        self._graph = graph
-        self._n = n
-        self._k = k
+        self._graph = problem.getGraph()
+        self._n = problem.getN()
+        self._k = problem.getK()
         self._model = pulp.LpProblem(name="facility-location-problem", sense=pulp.LpMinimize)
         # store the client and facility indices to make future lines easier to read
         self._clients = None

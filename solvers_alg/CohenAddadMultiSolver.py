@@ -5,18 +5,19 @@ import numpy as np
 import pandas as pd
 import torch
 
+from problems.KMProblem import KMProblem
 from solvers_alg.KMPSolver import KMPSolver
 
 
 class CohenAddadMultiSolver(KMPSolver):
-    def __init__(self, max_time, graph=None, n=None, k=None, solution=None):
+    def __init__(self, max_time, problem:KMProblem, solution=None):
         self._name = "Cohen-Addad Multi"
         self._solutionValue = 0
         self._selectedFacilities = []
 
-        self._graph = graph
-        self._n = n
-        self._k = k
+        self._graph = problem.getGraph()
+        self._n = problem.getN()
+        self._k = problem.getK()
         self._max_time = max_time
         self._check_counter = 0
         self._swap_counter = 0

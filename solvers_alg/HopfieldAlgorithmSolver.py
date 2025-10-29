@@ -4,6 +4,7 @@ import numpy as np
 import torch
 
 from algorithms.search_tree import SearchAgent
+from problems.KMProblem import KMProblem
 from solvers.brute_solver import calculate_distance
 from solvers_alg.KMPSolver import KMPSolver
 
@@ -12,16 +13,16 @@ FACILITY = 1
 CLIENT = 0
 
 class HopfieldAlgorithmSolver(KMPSolver):
-    def __init__(self, use_gpu, graph=None, n=None, k=None, search_tree_config=None):
+    def __init__(self, use_gpu, problem:KMProblem, search_tree_config=None):
         # Initialize Variables for Solver
         self._name = "Hopfield"
         self._solutionValue = 0
         self._selectedFacilities = []
 
         # Variables for Hopfield Algorithm
-        self._n = n
-        self._k = k
-        self._graph = graph
+        self._n = problem.getN()
+        self._k = problem.getK()
+        self._graph = problem.getGraph()
         self._search_tree_config = search_tree_config
 
         self._num_rows = 0

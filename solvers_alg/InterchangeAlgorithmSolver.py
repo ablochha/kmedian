@@ -4,20 +4,21 @@ import time
 
 import torch
 
+from problems.KMProblem import KMProblem
 from solvers.brute_solver import calculate_distance
 from solvers_alg.KMPSolver import KMPSolver
 
 
 class InterchangeAlgorithmSolver(KMPSolver):
-    def __init__(self, use_gpu, n=None, k=None, graph=None):
+    def __init__(self, use_gpu, problem:KMProblem):
         # Initialize Variables for Solver
         self._name = "Fast Interchange"
         self._solutionValue = 0
         self._selectedFacilities = []
 
-        self._graph = graph
-        self._n = n
-        self._k = k
+        self._graph = problem.getGraph()
+        self._n = problem.getN()
+        self._k = problem.getK()
         self._check_counter = 0
         self._swap_counter = 0
 

@@ -3,6 +3,7 @@ import random
 
 import numpy as np
 
+from problems.KMProblem import KMProblem
 from solvers.brute_solver import calculate_distance, get_facilities
 from solvers_alg.KMPSolver import KMPSolver
 
@@ -31,7 +32,7 @@ def calculate_temperature_decay(T, iterations):
 
 
 class HaralampievAlgorithmSolver(KMPSolver):
-    def __init__(self, temperature, epoch_length, decay_interval, graph=None, n=None, k=None, solution=None):
+    def __init__(self, temperature, epoch_length, decay_interval, problem:KMProblem, solution=None):
         # Initialize Variables for Solver
         self._name = "Haralampiev Network"
         self._solutionValue = 0
@@ -42,9 +43,9 @@ class HaralampievAlgorithmSolver(KMPSolver):
         self._epoch_length = epoch_length  # Set to none in order to dynamically get n at runtime
         self._alpha = calculate_temperature_decay(self._temperature, decay_interval)
 
-        self._n = n
-        self._k = k
-        self._G = graph
+        self._n = problem.getN()
+        self._k = problem.getK()
+        self._G = problem.getGraph()
 
         # caches to speed up getting the on group members
         self._on_client_cache = {}
