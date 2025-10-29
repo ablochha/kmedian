@@ -3,8 +3,8 @@ from problems.Problem import Problem
 
 class FLProblem(Problem):
     
-    def __init__(self, graph, n, openCost, optimal):
-        self._name = "Facility Location Problem"
+    def __init__(self, name, graph, n, openCost, optimal):
+        self._name = name
         self._graph = graph
         self._n = n
         self._openCost = openCost

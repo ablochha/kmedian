@@ -1,4 +1,4 @@
-import json
+import csv
 
 from reader.InputReader import InputReader
 
@@ -12,8 +12,14 @@ class KMPCSVReader(InputReader):
 
     def canRead(self, input):
         try:
-            with open(input) as f:
-                data = json.load(f)
-                return len(data) > 0 and data[0] == 2
-        except (FileNotFoundError, json.JSONDecodeError, IndexError):
+            with open(input, newline='') as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    if len(row) >= 2 and row[0].strip().lower() == "format":
+                        return row[1].strip() == "2"
+                return False  # "format" key not found
+        except (FileNotFoundError, csv.Error, IndexError):
             return False
+        
+    def parse(self, input):
+        pass

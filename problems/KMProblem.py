@@ -3,8 +3,8 @@ from problems.Problem import Problem
 
 class KMProblem(Problem):
     
-    def __init__(self, graph, n, k, optimal):
-        self._name = "K-Median Problem"
+    def __init__(self, name, graph, n, k, optimal):
+        self._name = name
         self._graph = graph
         self._n = n
         self._k = k
