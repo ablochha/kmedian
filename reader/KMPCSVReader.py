@@ -16,7 +16,7 @@ class KMPCSVReader(InputReader):
                 reader = csv.reader(f)
                 for row in reader:
                     if len(row) >= 2 and row[0].strip().lower() == "format":
-                        return row[1].strip() == "2"
+                        return row[1].strip() == "3"
                 return False  # "format" key not found
         except (FileNotFoundError, csv.Error, IndexError):
             return False
