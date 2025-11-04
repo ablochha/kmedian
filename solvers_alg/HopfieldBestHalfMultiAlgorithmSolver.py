@@ -9,7 +9,7 @@ from solvers_alg.KMPSolver import KMPSolver
 
 
 class HopfieldBestHalfMultiSolver(KMPSolver):
-    def __init__(self, use_gpu, problem:KMProblem, runNum):
+    def __init__(self, use_gpu, problem:KMProblem):
         # Initialize Variables for Solver
         self._name = "Hopfield 2nk Best Half Multi"
         self._solutionValue = 0
@@ -23,8 +23,6 @@ class HopfieldBestHalfMultiSolver(KMPSolver):
         self._num_cols = 0
         self._size = None
         self.numSwaps = 2
-
-        self._runNum = runNum
             
         # CPU/GPU toggle              
         self._use_gpu = use_gpu                      
@@ -125,7 +123,7 @@ class HopfieldBestHalfMultiSolver(KMPSolver):
             self._full_distance_values = torch.tensor(1 - graph._normalized_distances)
         self._distance_values = self._full_distance_values
     
-    def solve(self, starter_facilities=None):
+    def solve(self, runNum, starter_facilities=None):
                    
         best_facilities = starter_facilities
         best_distance = calculate_distance(self._graph, best_facilities, self._n) if starter_facilities else None
@@ -138,7 +136,7 @@ class HopfieldBestHalfMultiSolver(KMPSolver):
         #if current_time - start_time >= max_time:
         #    break
         # Initialize our per run variables.
-        self._initialize_per_run_arrays()
+        self._initialize_per_run_arrays(runNum)
         
         facility_stabilized = False
         #counter = 0
@@ -359,7 +357,7 @@ class HopfieldBestHalfMultiSolver(KMPSolver):
         self._selectedFacilities = best_facilities
         self._solutionValue = best_distance
 
-    def _initialize_per_run_arrays(self):
+    def _initialize_per_run_arrays(self, r):
     
         self._facility_activation_values = torch.zeros(size=self._size, dtype=torch.int, device=self._device)
         #self._facility_inner_values = torch.zeros(size=self._size, device=self._device)
@@ -367,7 +365,7 @@ class HopfieldBestHalfMultiSolver(KMPSolver):
         self._active_facility_list = []
         
         index = 0
-        if self._k > 2 and self._runNum > 0:
+        if self._k > 2 and r > 0:
             available_list = [i for i in range(self._n)]
             num = self._k
             if self._k > 3:

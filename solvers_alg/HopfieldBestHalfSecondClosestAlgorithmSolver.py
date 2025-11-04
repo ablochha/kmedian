@@ -12,7 +12,7 @@ FACILITY = 1
 CLIENT = 0
 
 class HopfieldBestHalfSecondClosestAlgorithmSolver(KMPSolver):
-    def __init__(self, use_gpu, problem:KMProblem, runNum):
+    def __init__(self, use_gpu, problem:KMProblem):
         # Initialize Variables for Solver
         self._name = "Hopfield 2nk Best Half Second Closest"
         self._solutionValue = 0
@@ -27,8 +27,6 @@ class HopfieldBestHalfSecondClosestAlgorithmSolver(KMPSolver):
         self._size = None
         self._facility_update_value = 1.0
         self._client_update_value = 1.0
-
-        self._runNum = runNum
             
         # CPU/GPU toggle              
         self._use_gpu = use_gpu                      
@@ -109,7 +107,7 @@ class HopfieldBestHalfSecondClosestAlgorithmSolver(KMPSolver):
     def getSelectedFacilities(self):
         return self._selectedFacilities
     
-    def solve(self, starter_facilities=None):
+    def solve(self,runNum, starter_facilities=None):
         best_facilities = starter_facilities
         best_distance = calculate_distance(self._graph, best_facilities, self._n) if starter_facilities else None
 
@@ -123,7 +121,7 @@ class HopfieldBestHalfSecondClosestAlgorithmSolver(KMPSolver):
         #    break
             
         # Initialize our per run variables.
-        self._initialize_per_run_arrays()
+        self._initialize_per_run_arrays(runNum)
         
         facility_stabilized = False
         #counter = 0
@@ -362,14 +360,14 @@ class HopfieldBestHalfSecondClosestAlgorithmSolver(KMPSolver):
         self._selectedFacilities = best_facilities
         self._solutionValue = best_distance
 
-    def _initialize_per_run_arrays(self):
+    def _initialize_per_run_arrays(self, r):
     
         self._facility_activation_values = torch.zeros(size=self._size, dtype=torch.int, device=self._device)
         self._facilities = torch.zeros(size=(1,self._num_rows), dtype=torch.int, device=self._device)
         self._active_facility_list = []
         
         index = 0
-        if self._k > 2 and self._runNum > 0:
+        if self._k > 2 and r > 0:
             available_list = [i for i in range(self._n)]
             num = self._k
             if self._k > 3:

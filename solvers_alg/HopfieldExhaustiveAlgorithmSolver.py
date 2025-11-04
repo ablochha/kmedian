@@ -10,7 +10,7 @@ from solvers_alg.KMPSolver import KMPSolver
 
 
 class HopfieldExhaustiveAlgorithmSolver(KMPSolver):
-    def __init__(self, use_gpu, problem:KMProblem, runNum):
+    def __init__(self, use_gpu, problem:KMProblem):
         # Initialize Variables for Solver
         self._name = "Hopfield 2nk Exhaustive"
         self._solutionValue = 0
@@ -25,8 +25,6 @@ class HopfieldExhaustiveAlgorithmSolver(KMPSolver):
         self._size = None
         self._facility_update_value = 1.0
         self._client_update_value = 1.0
-
-        self._runNum = runNum
             
         # CPU/GPU toggle              
         self._use_gpu = use_gpu                      
@@ -139,13 +137,13 @@ class HopfieldExhaustiveAlgorithmSolver(KMPSolver):
     def setGraph(self, graph):
         self._graph = graph
     
-    def solve(self, starter_facilities=None):
+    def solve(self,runNum, starter_facilities=None):
         
         best_facilities = starter_facilities
         best_distance = calculate_distance(self._graph, best_facilities, self._n) if starter_facilities else None
         self.start_time = time.time()
                 
-        self._initialize_per_run_arrays()
+        self._initialize_per_run_arrays(runNum)
         facility_stabilized = False
         while not facility_stabilized:
             current_time = time.time()
@@ -156,7 +154,7 @@ class HopfieldExhaustiveAlgorithmSolver(KMPSolver):
 
         self._selectedFacilities, self._solutionValue = self._calculate_facilities_and_distance()
 
-    def _initialize_per_run_arrays(self):
+    def _initialize_per_run_arrays(self, r):
     
         self._facility_activation_values = torch.zeros(size=self._size, dtype=torch.int, device=self._device)
         #self._facility_inner_values = torch.zeros(size=self._size, device=self._device)
@@ -164,7 +162,7 @@ class HopfieldExhaustiveAlgorithmSolver(KMPSolver):
         self._active_facility_list = []
         
         index = 0
-        if self._k > 2 and self._runNum > 0:
+        if self._k > 2 and r > 0:
             available_list = [i for i in range(self._n)]
             num = self._k
             if self._k > 3:
