@@ -32,7 +32,7 @@ def calculate_temperature_decay(T, iterations):
 
 
 class HaralampievAlgorithmSolver(KMPSolver):
-    def __init__(self, temperature, epoch_length, decay_interval, problem:KMProblem, solution=None):
+    def __init__(self, temperature, epoch_length, decay_interval, solution=None):
         # Initialize Variables for Solver
         self._name = "Haralampiev Network"
         self._solutionValue = 0
@@ -43,9 +43,9 @@ class HaralampievAlgorithmSolver(KMPSolver):
         self._epoch_length = epoch_length  # Set to none in order to dynamically get n at runtime
         self._alpha = calculate_temperature_decay(self._temperature, decay_interval)
 
-        self._n = problem.getN()
-        self._k = problem.getK()
-        self._G = problem.getGraph()
+        self._n = None
+        self._k = None
+        self._G = None
 
         # caches to speed up getting the on group members
         self._on_client_cache = {}
@@ -66,7 +66,11 @@ class HaralampievAlgorithmSolver(KMPSolver):
         self._distances = None
         self._maxTime = None
 
-    def initialize(self):
+    def initialize(self, problem:KMProblem):
+
+        self._n = problem.getN()
+        self._k = problem.getK()
+        self._G = problem.getGraph()
 
         if self._G is None or self._n is None or self._k is None:
             raise ValueError("Graph, n, and k must be set before calling initialize().")

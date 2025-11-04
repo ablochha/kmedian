@@ -8,20 +8,23 @@ from solvers_alg.KMPSolver import KMPSolver
 
 
 class DominguezAlgorithmSolver(KMPSolver):
-    def __init__(self, problem:KMProblem, use_gpu=False):
+    def __init__(self, use_gpu=False):
         # Initialize Variables for Solver
         self._name = "Dominguez"
         self._solutionValue = 0
         self._selectedFacilities = []
 
         self.verbose = False
-        self._n = problem.getN()
-        self._k = problem.getK()
-        self._graph = problem.getGraph()
+        self._n = None
+        self._k = None
+        self._graph = None
 
         self._vertices = None
         
-    def initialize(self):
+    def initialize(self, problem:KMProblem):
+        self._n = problem.getN()
+        self._k = problem.getK()
+        self._graph = problem.getGraph()
 
         if self._graph is None or self._n is None or self._k is None:
             raise ValueError("Graph, n, and k must be set before calling initialize().")

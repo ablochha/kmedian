@@ -13,16 +13,16 @@ FACILITY = 1
 CLIENT = 0
 
 class HopfieldAlgorithmSolver(KMPSolver):
-    def __init__(self, use_gpu, problem:KMProblem, search_tree_config=None):
+    def __init__(self, use_gpu, search_tree_config=None):
         # Initialize Variables for Solver
         self._name = "Hopfield"
         self._solutionValue = 0
         self._selectedFacilities = []
 
         # Variables for Hopfield Algorithm
-        self._n = problem.getN()
-        self._k = problem.getK()
-        self._graph = problem.getGraph()
+        self._n = None
+        self._k = None
+        self._graph = None
         self._search_tree_config = search_tree_config
 
         self._num_rows = 0
@@ -73,7 +73,10 @@ class HopfieldAlgorithmSolver(KMPSolver):
 
         self._maxTime = 0
 
-    def initialize(self):
+    def initialize(self, problem:KMProblem):
+        self._n = problem.getN()
+        self._k = problem.getK()
+        self._graph = problem.getGraph()
         if self._graph is None or self._n is None or self._k is None:
             raise ValueError("Graph, n, and k must be set before calling initialize().")
         

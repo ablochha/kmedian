@@ -10,15 +10,15 @@ from solvers_alg.KMPSolver import KMPSolver
 
 
 class InterchangeAlgorithmSolver(KMPSolver):
-    def __init__(self, use_gpu, problem:KMProblem):
+    def __init__(self, use_gpu):
         # Initialize Variables for Solver
         self._name = "Fast Interchange"
         self._solutionValue = 0
         self._selectedFacilities = []
 
-        self._graph = problem.getGraph()
-        self._n = problem.getN()
-        self._k = problem.getK()
+        self._graph = None
+        self._n = None
+        self._k = None
         self._check_counter = 0
         self._swap_counter = 0
 
@@ -35,7 +35,10 @@ class InterchangeAlgorithmSolver(KMPSolver):
         
         self.maxTime = None
 
-    def initialize(self):
+    def initialize(self, problem:KMProblem):
+        self._graph = problem.getGraph()
+        self._n = problem.getN()
+        self._k = problem.getK()
         # prepare the initial vertices
         vertices = [0 for _ in range(self._n)]
         # randomly pick k vertices

@@ -12,16 +12,16 @@ FACILITY = 1
 CLIENT = 0
 
 class HopfieldBestHalfSecondClosestAlgorithmSolver(KMPSolver):
-    def __init__(self, use_gpu, problem:KMProblem):
+    def __init__(self, use_gpu):
         # Initialize Variables for Solver
         self._name = "Hopfield 2nk Best Half Second Closest"
         self._solutionValue = 0
         self._selectedFacilities = []
 
         self.verbose = False
-        self._n = problem.getN()
-        self._k = problem.getK()
-        self._graph = problem.getGraph()
+        self._n = None
+        self._k = None
+        self._graph = None
         self._num_rows = None
         self._num_cols = None
         self._size = None
@@ -60,7 +60,10 @@ class HopfieldBestHalfSecondClosestAlgorithmSolver(KMPSolver):
         self._sorted_facility_inner_values = None
         self._sorted_facility_indices = None
 
-    def initialize(self):
+    def initialize(self, problem:KMProblem):
+        self._n = problem.getN()
+        self._k = problem.getK()
+        self._graph = problem.getGraph()
         if self._graph is None or self._n is None or self._k is None:
             raise ValueError("Graph, n, and k must be set before calling initialize().")
         

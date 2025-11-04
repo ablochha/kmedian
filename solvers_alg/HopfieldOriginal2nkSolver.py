@@ -12,16 +12,16 @@ FACILITY = 1
 CLIENT = 0
 
 class HopfieldOriginalSolver(KMPSolver):
-    def __init__(self, use_gpu, problem:KMProblem):
+    def __init__(self, use_gpu):
         # Initialize Variables for Solver
         self._name = "Hopfield (original 2nk)"
         self._solutionValue = 0
         self._selectedFacilities = []
 
         self.verbose = False
-        self._n = problem.getN()
-        self._k = problem.getK()
-        self._graph = problem.getGraph()
+        self._n = None
+        self._k = None
+        self._graph = None
         self._num_rows = 0
         self._num_cols = 0
         self._size = None
@@ -64,7 +64,10 @@ class HopfieldOriginalSolver(KMPSolver):
         #self.D_cols = torch.zeros((self._n, self._n - k + 1), device=self._device)
         #self.D_rr = torch.zeros((self._n - k + 1, self._n - k + 1), device=self._device)
 
-    def initialize(self):
+    def initialize(self, problem:KMProblem):
+        self._n = problem.getN()
+        self._k = problem.getK()
+        self._graph = problem.getGraph()
         if self._graph is None or self._n is None or self._k is None:
             raise ValueError("Graph, n, and k must be set before calling initialize().")
         

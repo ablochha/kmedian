@@ -8,15 +8,15 @@ from solvers_alg.KMPSolver import KMPSolver
 
 
 class AryaMultiSolver(KMPSolver):
-    def __init__(self, max_time, problem:KMProblem, solution=None):
+    def __init__(self, max_time, solution=None):
         # Initialize Variables for Solver
         self._name = "Arya Multi"
         self._solutionValue = 0
         self._selectedFacilities = []
 
-        self._graph = problem.getGraph()
-        self._n = problem.getN()
-        self._k = problem.getK()
+        self._graph = None
+        self._n = None
+        self._k = None
         self._max_time = max_time
         self._check_counter = 0
         self._swap_counter = 0
@@ -25,7 +25,10 @@ class AryaMultiSolver(KMPSolver):
         self._vertices = None
         self._solution = solution
 
-    def initialize(self):
+    def initialize(self, problem:KMProblem):
+        self._graph = problem.getGraph()
+        self._n = problem.getN()
+        self._k = problem.getK()
         if self._graph is None or self._n is None or self._k is None:
             raise ValueError("Graph, n, and k must be set before calling initialize().")
         if self._solution:

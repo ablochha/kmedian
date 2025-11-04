@@ -6,6 +6,9 @@ from utils.graph import CoordinateGraph
 
 
 class KMPJSONCoordinateReader(InputReader):
+    def __init__(self):
+        self._next = None
+        
     def setNext(self, next):
         return super().setNext(next)
 
