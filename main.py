@@ -171,4 +171,4 @@ if __name__ == '__main__':
     problems = load_problems(dataset_path, dataset_key, args["use_gpu"])
 
     manager = ExperimentManager(problems, solver, args.get("runs", None))
-    manager.run()
+    manager.run(dataset_key)

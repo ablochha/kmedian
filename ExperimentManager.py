@@ -1,5 +1,6 @@
 import csv
 import os
+import re
 import time
 
 import numpy as np
@@ -35,18 +36,20 @@ class ExperimentManager():
         else:
             self._num_runs = num_runs
 
-    def run(self):
-        if isinstance(self._problems, list):
+    def run(self, dataset_key):
+        if dataset_key in ["4", "5"]:
             # Case 1: list of test sets
             results = self._run_from_list()
-        elif isinstance(self._problems, dict):
+        elif dataset_key in ["1", "2", "3"]:
             # Case 2: dict of directories (e.g., {"pmed": tests_object})
             results = self._run_from_directory_dict()
+        elif dataset_key == "6":
+            results = self._run_special()
         else:
             raise TypeError("Did not pass a list of problems to Experiment Manage")
 
         # Save results
-        self._save_results_to_csv(results)
+        self._save_results_to_csv(results, dataset_key)
 
     def _run_from_list(self):
         results = []
@@ -149,32 +152,60 @@ class ExperimentManager():
             print(f"n={problem.getN()} k={problem.getK()} Completed")
 
         return results
+    
+    def _run_special(self):
+        results = []
 
-    def _save_results_to_csv(self, results):
-        # Detect if results contain names (list case) or not (directory case)
-        # If first element has 11 values → includes name; if 10 → no name
-        has_name = len(results[0]) == 11 if results else False
+        for problem in self._problems:
+            optimal_distance = problem.getOptimal()
+            self._solver.initialize(problem)
 
-        if has_name:
-            # Use first problem's name as part of filename
-            first_name = results[0][0].replace(" ", "_")  # replace spaces with _
+            start_time = time.time()
+            self._solver.solve()
+            facilities = self._solver.getSelectedFacilities()
+            end_time = time.time()
+            total_time = end_time - start_time
+
+            distance = calculate_distance(problem.getGraph(), facilities, problem.getN())
+            ratio = distance / optimal_distance
+            test_name = problem.getName()
+            results.append((test_name, problem.getN(), problem.getK(), ratio, total_time, distance))
+            print(f"n={problem.getN()} k={problem.getK()} Completed")
+
+        return results
+
+
+    def _save_results_to_csv(self, results, dataset_key):
+        if dataset_key in ["4", "5", "6"]:
+            # Original value
+            full_name = results[0][0]
+            # Keep only the letters at the start
+            first_name = re.match(r"[a-zA-Z]+", full_name).group(0)
+            # Replace spaces just in case (optional)
+            first_name = first_name.replace(" ", "_")
             output_filename = f"results_{first_name}.csv"
-        else:
+            has_name = True
+        elif dataset_key in ["1", "2", "3"]:
             # Use timestamp if no names
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             output_filename = f"results_{timestamp}.csv"
+            has_name = False
 
         # Get the directory where this file (ExperimentManager) is located
         base_dir = os.path.dirname(os.path.abspath(__file__))
         output_path = os.path.join(base_dir, output_filename)
 
         # Build appropriate header
-        if has_name:
+        if has_name and dataset_key in ["4", "5"]:
             header = [
                 "Instance", "N", "K", "Min Ratio", "Average Ratio", "Max Ratio",
                 "Min Time", "Average Time", "Max Time",
                 "Standard Deviation (Ratio)", "Standard Deviation (Time)"
             ]
+        elif dataset_key == "6":
+            header = [
+                "Instance", "N", "K", "Ratio", "Total Time", "Distance"
+        ]
         else:
             header = [
                 "N", "K", "Min Ratio", "Average Ratio", "Max Ratio",
@@ -190,7 +221,7 @@ class ExperimentManager():
             writer.writerow(header)
 
             for r in results:
-                if has_name:
+                if dataset_key in ["4", "5"]:
                     name, n, k, min_ratio, avg_ratio, max_ratio, min_time, avg_time, max_time, std_ratio, std_time = r
                     writer.writerow([
                         name, n, k,
@@ -198,6 +229,10 @@ class ExperimentManager():
                         f"{min_time:.3f}", f"{avg_time:.3f}", f"{max_time:.3f}",
                         f"{std_ratio:.3f}", f"{std_time:.3f}"
                     ])
+                elif dataset_key == "6":
+                    writer.writerow([
+                        r[0], r[1], r[2], f"{r[3]:.3f}", f"{r[4]:.3f}", f"{r[5]:.3f}"
+                ])
                 else:
                     n, k, min_ratio, avg_ratio, max_ratio, min_time, avg_time, max_time, std_ratio, std_time = r
                     writer.writerow([
