@@ -83,7 +83,7 @@ class AryaMultiSolver(KMPSolver):
 
     :return: None
     """
-    def solve(self):
+    def solve(self, runNum=None):
 
         #print("START")
         start_time = time.time()

@@ -88,7 +88,7 @@ class LocalSearchSolver(KMPSolver):
     def setGraph(self, graph):
         self._graph = graph
     
-    def solve(self):
+    def solve(self, runNum=None):
         start_time = time.time()
         best_distance = self.calculate_distance()
         while True:

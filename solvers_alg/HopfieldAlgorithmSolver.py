@@ -143,7 +143,7 @@ class HopfieldAlgorithmSolver(KMPSolver):
     def setGraph(self, graph):
         self._graph = graph
 
-    def solve(self, starter_facilities=None):
+    def solve(self,runNum=None, starter_facilities=None):
     
         if self._search_tree_config is not None:
             search_agent = SearchAgent(

@@ -80,7 +80,7 @@ class CohenAddadMultiSolver(KMPSolver):
     def setGraph (self, graph):
         self._graph = graph
 
-    def solve(self):
+    def solve(self, runNum=None):
         """
         Randomly select a client and compare swapping it with each facility.
         If the distance is improved, we select the swap pair that decreases the distance the most.

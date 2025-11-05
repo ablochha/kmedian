@@ -81,7 +81,7 @@ class ZhuAlgorithmSolver(KMPSolver):
     def setGraph(self, graph):
         self._graph = graph
     
-    def solve(self):
+    def solve(self, runNum=None):
     
         # print("Vertices: ", self.n, ", Facilities: ", self.k)
         

@@ -184,7 +184,7 @@ class HaralampievAlgorithmSolver(KMPSolver):
     def setGraph(self, graph):
         self._G = graph
     
-    def solve(self):
+    def solve(self, runNum=None):
         warm_instance = RandomChoiceAlgorithm()
         warm_solution = warm_instance.run(self._G, self._n, self._k)
         self.warm_start(warm_solution)

@@ -70,7 +70,7 @@ class DominguezAlgorithmSolver(KMPSolver):
     def setMaxTime (self, max_time):
         self._maxTime = max_time
     
-    def solve(self):
+    def solve(self, runNum=None):
         best_facilities = None
         best_distance = None
 

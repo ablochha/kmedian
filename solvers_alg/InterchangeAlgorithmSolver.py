@@ -94,7 +94,7 @@ class InterchangeAlgorithmSolver(KMPSolver):
     def setGraph(self, graph):
         self._graph = graph
 
-    def solve(self):
+    def solve(self, runNum=None):
         self._start_time = time.time()
         self._affected_clients = [i for i in range(self._n) if self._vertices[i] == 0]
         self.resetStructures()

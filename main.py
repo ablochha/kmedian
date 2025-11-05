@@ -1,6 +1,7 @@
 import os
 import time
 
+from ExperimentManager import ExperimentManager
 from reader.KMPJSONCoordinateReader import KMPJSONCoordinateReader
 from reader.KMPJSONDistanceReader import KMPJSONDistanceReader
 from solvers_alg.AryaMultiSolver import AryaMultiSolver
@@ -169,10 +170,5 @@ if __name__ == '__main__':
 
     problems = load_problems(dataset_path, dataset_key, args["use_gpu"])
 
-    # Print summary
-    if isinstance(problems, dict):
-        print(f"Loaded {len(problems)} groups of problems (nested dataset).")
-        for subdir, plist in problems.items():
-            print(f"  {subdir}: {len(plist)} problem files.")
-    else:
-        print(f"Loaded {len(problems)} problems (flat dataset).")
+    manager = ExperimentManager(problems, solver, args.get("runs", None))
+    manager.run()
