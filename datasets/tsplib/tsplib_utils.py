@@ -2,10 +2,11 @@ import csv
 import json
 import os
 import time
+
 import numpy as np
 
 from solvers.brute_solver import calculate_distance
-from utils.graph import DistanceGraph, CoordinateGraph
+from utils.graph import CoordinateGraph, DistanceGraph
 
 
 def run_tests(dataset_folder_path, algorithm_instance, use_gpu):
@@ -60,11 +61,17 @@ def run_tests(dataset_folder_path, algorithm_instance, use_gpu):
         times = []
         minTime = 99999.999
         maxTime = 0.000
+
+        algorithm_instance.setN(n)
+        algorithm_instance.setK(k)
+        algorithm_instance.setGraph(graph)
+        algorithm_instance.initialize()
         
         for iteration in range(10):
 
             start_time = time.time()
-            facilities = algorithm_instance.run(graph, n, k)
+            algorithm_instance.solve()
+            facilities = algorithm_instance.getSelectedFacilities()
             end_time = time.time()
             elapsedTime = end_time - start_time
             times.append(elapsedTime)
