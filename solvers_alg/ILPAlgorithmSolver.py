@@ -48,7 +48,7 @@ class ILPAlgorithmSolver(KMPSolver):
         #self.model += pulp.lpSum(self.d[u][v] * self.X[(u, v)] for u in self.clients for v in self.facilities if self.F[v] == 1.0)
         self._model += pulp.lpSum(self._d[u][v] * self._X[(u, v)] for u in self._clients for v in self._facilities)
         # add constraints
-        self._model += (pulp.lpSum(self._F) <= k, "Up to K facilities")
+        self._model += (pulp.lpSum(self._F) <= self._k, "Up to K facilities")
         for u in self._clients:
             self._model += (pulp.lpSum(self._X[(u, v)] for v in self._facilities) == 1), f"Client {u} is connected"
         for u in self._clients:
