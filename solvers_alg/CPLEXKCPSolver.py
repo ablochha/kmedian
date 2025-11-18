@@ -1,12 +1,12 @@
 from docplex.mp.model import Model
 
-from problems.KMProblem import KMProblem
+from problems.KCProblem import KCProblem
 from solvers.brute_solver import calculate_distance
-from solvers_alg.KMPSolver import KMPSolver
+from solvers_alg.KCPSolver import KCPSolver
 
 
-class CPLEXKMPSolver(KMPSolver):
-    def __init__(self, problem: KMProblem):
+class CPLEXKCPSolver(KCPSolver):
+    def __init__(self, problem: KCProblem):
         self._name = "CPLEX ILP Solver - K-Median Problem"
         self._solutionValue = 0
         self._selectedFacilities = []
@@ -21,11 +21,14 @@ class CPLEXKMPSolver(KMPSolver):
         # indices and data placeholders
         self._clients = None
         self._facilities = None
+
         # d[(u,v)] distance values (keys are strings to match your original usage)
         self._d = {}
+
         # variables
         self._X = {}
         self._F = {}
+        self._R = None
 
     def initialize(self):
         if self._graph is None or self._n is None or self._k is None:
@@ -34,13 +37,13 @@ class CPLEXKMPSolver(KMPSolver):
         self._clients = [str(i) for i in range(self._n)]
         self._facilities = [str(i) for i in range(self._n)]
 
-        # distances: store in a dict keyed by tuple of strings (u, v)
-        raw_distances = self.calculate_distances()
+        # Build distance dictionary
+        raw = self.calculate_distances()
         for i, u in enumerate(self._clients):
             for j, v in enumerate(self._facilities):
-                self._d[(u, v)] = raw_distances[i][j]
+                self._d[(u, v)] = raw[i][j]
 
-        # create binary variables
+        # Create variables
         for v in self._facilities:
             self._F[v] = self._model.binary_var(name=f"F_{v}")
 
@@ -48,30 +51,38 @@ class CPLEXKMPSolver(KMPSolver):
             for v in self._facilities:
                 self._X[(u, v)] = self._model.binary_var(name=f"X_{u}_{v}")
 
-        # objective: minimize sum of distances * connection variables
-        self._model.minimize(self._model.sum(self._d[(u, v)] * self._X[(u, v)] for u in self._clients for v in self._facilities))
+        self._R = self._model.continuous_var(lb=0, name="R")
 
-        # constraint: at most k facilities
+        # Objective: minimize radius
+        self._model.minimize(self._R)
+
+        # Constraints
+        # 1. At most k facilities
         self._model.add_constraint(self._model.sum(self._F[v] for v in self._facilities) <= self._k, ctname="Up_to_K_facilities")
 
-        # each client connected to exactly one facility
+        # 2. Every client must be assigned to exactly one facility
         for u in self._clients:
             self._model.add_constraint(self._model.sum(self._X[(u, v)] for v in self._facilities) == 1, ctname=f"Client_{u}_connected")
 
-        # connection implies facility opened: X[u,v] <= F[v]
+        # 3. Cannot assign a client to a closed facility
         for u in self._clients:
             for v in self._facilities:
                 self._model.add_constraint(self._X[(u, v)] <= self._F[v], ctname=f"Link_{u}_{v}")
 
+        # 4. Radius definition: d(u,v) * X[u,v] <= R
+        for u in self._clients:
+            for v in self._facilities:
+                self._model.add_constraint(self._d[(u, v)] * self._X[(u, v)] <= self._R, ctname=f"radius_{u}_{v}")
+
     def getName(self):
         return self._name
-    
+
     def getSolutionValue(self):
         return self._solutionValue
 
     def getSelectedFacilities(self):
         return self._selectedFacilities
-
+    
     def setN(self, n):
         self._n = n
 
@@ -82,19 +93,16 @@ class CPLEXKMPSolver(KMPSolver):
         self._graph = graph
 
     def solve(self, max_time=None):
-        # map time limit if provided
         if max_time is not None:
             self._model.parameters.timelimit = max_time
 
-        # solve the model
         solution = self._model.solve(log_output=False)
 
         if solution is None:
-            # no feasible solution found
             self._selectedFacilities = []
-            self._solutionValue = float('inf')
+            self._solutionValue = None
             return
-
+        
         selected_facilities = []
         for facility in self._facilities:
             val = self._F[facility].solution_value
@@ -107,12 +115,12 @@ class CPLEXKMPSolver(KMPSolver):
         self._solutionValue = calculate_distance(self._graph, selected_facilities, self._n)
 
     def warm_start(self, solution, client_connections):
-        """Attempt to warm-start the solver by setting start values on variables.
+        """Warm-start the k-center solver by setting start values on variables.
 
         `solution` should be an iterable of facility indices to open.
         `client_connections` should be iterable of (client, facility) pairs.
         """
-        # set all starts to 0 first
+        # --- 1. Reset all starts to 0 ---
         for facility in self._facilities:
             var = self._F[facility]
             for attr in ('start', 'start_value'):
@@ -130,7 +138,7 @@ class CPLEXKMPSolver(KMPSolver):
                     except Exception:
                         pass
 
-        # set provided starts
+        # --- 2. Set provided warm-start facilities ---
         for facility in solution:
             var = self._F[str(facility)]
             for attr in ('start', 'start_value'):
@@ -139,12 +147,24 @@ class CPLEXKMPSolver(KMPSolver):
                 except Exception:
                     pass
 
+        # --- 3. Set warm-start client assignments ---
         for pair in client_connections:
             c, f = pair
             var = self._X[(str(c), str(f))]
             for attr in ('start', 'start_value'):
                 try:
                     setattr(var, attr, 1)
+                except Exception:
+                    pass
+
+        # --- 4. Set R to max assigned distance to be feasible ---
+        if solution and client_connections:
+            R_start = 0
+            for c, f in client_connections:
+                R_start = max(R_start, self._d[(str(c), str(f))])
+            for attr in ('start', 'start_value'):
+                try:
+                    setattr(self._R, attr, R_start)
                 except Exception:
                     pass
 
