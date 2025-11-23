@@ -6,14 +6,14 @@ from solvers_alg.KCPSolver import KCPSolver
 
 
 class CPLEXKCPSolver(KCPSolver):
-    def __init__(self, problem: KCProblem):
+    def __init__(self):
         self._name = "CPLEX ILP Solver - K-Median Problem"
         self._solutionValue = 0
         self._selectedFacilities = []
 
-        self._graph = problem.getGraph()
-        self._n = problem.getN()
-        self._k = problem.getK()
+        self._graph = None
+        self._n = None
+        self._k = None
 
         # DOcplex model
         self._model = Model(name="K-Median Problem")
@@ -30,7 +30,10 @@ class CPLEXKCPSolver(KCPSolver):
         self._F = {}
         self._R = None
 
-    def initialize(self):
+    def initialize(self, problem: KCProblem):
+        self._graph = problem.getGraph()
+        self._n = problem.getN()
+        self._k = problem.getK()
         if self._graph is None or self._n is None or self._k is None:
             raise ValueError("Graph, n, and k must be set before calling initialize().")
         
@@ -41,7 +44,11 @@ class CPLEXKCPSolver(KCPSolver):
         raw = self.calculate_distances()
         for i, u in enumerate(self._clients):
             for j, v in enumerate(self._facilities):
-                self._d[(u, v)] = raw[i][j]
+                distance_value = raw[i][j]
+                if hasattr(distance_value, 'item'):
+                    self._d[(u, v)] = distance_value.item() # Use .item() to extract the Python number
+                else:
+                    self._d[(u, v)] = distance_value # If it's already a number, just assign it
 
         # Create variables
         for v in self._facilities:
@@ -180,7 +187,7 @@ class CPLEXKCPSolver(KCPSolver):
             distance_row = []
             for j in range(self._n):
                 distance_row.append(self._graph.get_standard_distance(i, j))
-        distances.append(distance_row)
+            distances.append(distance_row)
 
         return distances
     

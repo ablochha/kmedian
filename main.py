@@ -79,7 +79,7 @@ def load_problems(dataset_path, dataset_key, use_gpu):
                 except Exception as e:
                     print(f"⚠️ Failed to read {file_path}: {e}")
         return problems
-    elif dataset_key in ["4", "5", "6"]:
+    elif dataset_key in ["4", "6"]:
         # Flat distance datasets
         problems = []
 
@@ -89,6 +89,24 @@ def load_problems(dataset_path, dataset_key, use_gpu):
             file_path = os.path.join(dataset_path, filename)
             try:
                 reader = KMPJSONDistanceReader()
+                if reader.canRead(file_path):
+                    problem = reader.parse(file_path, use_gpu)
+                    problems.append(problem)
+                else:
+                    print(f"⚠️ Skipped {file_path}: cannot read")
+            except Exception as e:
+                print(f"⚠️ Failed to read {file_path}: {e}")
+        return problems
+    elif dataset_key in ["5"]:
+        # Flat coordinate datasets
+        problems = []
+
+        for filename in os.listdir(dataset_path):
+            if not filename.endswith(".json"):
+                continue
+            file_path = os.path.join(dataset_path, filename)
+            try:
+                reader = KMPJSONCoordinateReader()
                 if reader.canRead(file_path):
                     problem = reader.parse(file_path, use_gpu)
                     problems.append(problem)
