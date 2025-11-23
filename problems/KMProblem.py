@@ -32,7 +32,7 @@ class KMProblem(Problem):
         self._k = k
 
     def getGraph(self):
-        return self._graph  
+        return self._graph
     
     def setGraph(self, graph):
         self._graph = graph
