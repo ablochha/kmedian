@@ -59,7 +59,7 @@ def load_problems(dataset_path, dataset_key, use_gpu):
         # Nested coordinate datasets
         problems = {}
 
-        for subdir in os.listdir(dataset_path):
+        for subdir in sorted(os.listdir(dataset_path)):
             subdir_path = os.path.join(dataset_path, subdir)
             if not os.path.isdir(subdir_path):
                 continue
@@ -83,7 +83,7 @@ def load_problems(dataset_path, dataset_key, use_gpu):
         # Flat distance datasets
         problems = []
 
-        for filename in os.listdir(dataset_path):
+        for filename in sorted(os.listdir(dataset_path)):
             if not filename.endswith(".json"):
                 continue
             file_path = os.path.join(dataset_path, filename)
@@ -101,7 +101,7 @@ def load_problems(dataset_path, dataset_key, use_gpu):
         # Flat coordinate datasets
         problems = []
 
-        for filename in os.listdir(dataset_path):
+        for filename in sorted(os.listdir(dataset_path)):
             if not filename.endswith(".json"):
                 continue
             file_path = os.path.join(dataset_path, filename)

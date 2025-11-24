@@ -51,52 +51,71 @@ class ExperimentManager():
         # Save results
         self._save_results_to_csv(results, dataset_key)
 
+    def _run_single_test(self, problem):
+        """Helper function to run a single problem instance multiple times."""
+        optimal_distance = problem.getOptimal()
+        
+        ratios = []
+        minRatio = 100.000
+        maxRatio = 0.000
+        
+        times = []
+        minTime = 99999.999
+        maxTime = 0.000
+        
+        # Initialize the solver for the *current* problem instance
+        self._solver.initialize(problem)
+
+        for iteration in range(self._num_runs):
+            start_time = time.time()
+            self._solver.solve(iteration)
+            facilities = self._solver.getSelectedFacilities()
+            end_time = time.time()
+            elapsedTime = end_time - start_time
+            times.append(elapsedTime)
+
+            if elapsedTime > maxTime:
+                maxTime = elapsedTime
+            if elapsedTime < minTime:
+                minTime = elapsedTime
+
+            distance = calculate_distance(problem.getGraph(), facilities, problem.getN())
+            approximationRatio = distance / optimal_distance
+            ratios.append(approximationRatio)
+            
+            if approximationRatio > maxRatio:
+                maxRatio = approximationRatio
+            if approximationRatio < minRatio:
+                minRatio = approximationRatio
+                
+        # Calculate stats for the run
+        average_ratio = sum(ratios) / len(ratios)
+        average_time = sum(times) / len(times)
+        standard_deviation_ratio = np.std(ratios, dtype=np.float64)
+        standard_deviation_time = np.std(times, dtype=np.float64)
+        
+        return (problem.getName(), problem.getN(), problem.getK(), 
+                minRatio, average_ratio, maxRatio, minTime, average_time, 
+                maxTime, standard_deviation_ratio, standard_deviation_time)
+
+
     def _run_from_list(self):
         results = []
         for problem in self._problems:
-            optimal_distance = problem.getOptimal()
-
-            ratios = []
-            minRatio = 100.000
-            maxRatio = 0.000
+            # 1. Run the test and get the results tuple
+            # This calls the solver initialization once per problem instance
+            result_tuple = self._run_single_test(problem)
             
-            times = []
-            minTime = 99999.999
-            maxTime = 0.000
-
-            self._solver.initialize(problem)
-
-            for iteration in range(self._num_runs):
-                start_time = time.time()
-                self._solver.solve(iteration)
-                facilities = self._solver.getSelectedFacilities()
-                end_time = time.time()
-                elapsedTime = end_time - start_time
-                times.append(elapsedTime)
-
-                if elapsedTime > maxTime:
-                    maxTime = elapsedTime
-                if elapsedTime < minTime:
-                    minTime = elapsedTime
-
-                distance = calculate_distance(problem.getGraph(), facilities, problem.getN())
-                approximationRatio = distance / optimal_distance
-                ratios.append(approximationRatio)
-                
-                if approximationRatio > maxRatio:
-                    maxRatio = approximationRatio
-                if approximationRatio < minRatio:
-                    minRatio = approximationRatio
-
-            average_ratio = sum(ratios) / len(ratios)
-            average_time = sum(times) / len(times)
-            standard_deviation_ratio = np.std(ratios, dtype=np.float64)
-            standard_deviation_time = np.std(times, dtype=np.float64)
-            test_name = problem.getName()
-
-            results.append((test_name, problem.getN(), problem.getK(), minRatio, average_ratio, maxRatio, minTime, average_time, maxTime, standard_deviation_ratio, standard_deviation_time))    
-            #results.append((test_name, n, k, ratio, total_time, distance))
-            print(f"n={problem.getN()} k={problem.getK()} Completed")
+            # 2. Append the result
+            results.append(result_tuple)
+            
+            # 3. Explicitly delete the local reference to the problem object
+            # This frees up the memory for the large graph/tensors sooner.
+            n = problem.getN()
+            k = problem.getK()
+            del problem 
+            
+            print(f"n={n} k={k} Completed")
 
         return results
     
@@ -105,51 +124,18 @@ class ExperimentManager():
         results = []
 
         for key, problem_list in self._problems.items():
-
             for problem in problem_list:
-                optimal_distance = problem.getOptimal()
-
-                key_ratios = []
-                minRatio = 100.000
-                maxRatio = 0.000
-
-                key_times = []
-                minTime = 99999.999
-                maxTime = 0.000
-
-                self._solver.initialize(problem)
-
-                # Run the solver multiple times for stability
-                for iteration in range(self._num_runs):
-                    start_time = time.time()
-                    self._solver.solve(iteration)
-                    facilities = self._solver.getSelectedFacilities()
-                    end_time = time.time()
-
-                    elapsedTime = end_time - start_time
-                    key_times.append(elapsedTime)
-
-                    if elapsedTime > maxTime:
-                        maxTime = elapsedTime
-                    if elapsedTime < minTime:
-                        minTime = elapsedTime
-
-                    distance = calculate_distance(problem.getGraph(), facilities, problem.getN())
-                    approximationRatio = distance / optimal_distance
-                    key_ratios.append(approximationRatio)
-
-                    if approximationRatio > maxRatio:
-                        maxRatio = approximationRatio
-                    if approximationRatio < minRatio:
-                        minRatio = approximationRatio
-
-            average_ratio = sum(key_ratios) / len(key_ratios)
-            average_time = sum(key_times) / len(key_times)
-            standard_deviation_ratio = np.std(key_ratios, dtype=np.float64)
-            standard_deviation_time = np.std(key_times, dtype=np.float64)
-            results.append((problem.getN(), problem.getK(), minRatio, average_ratio, maxRatio, minTime, average_time, maxTime, standard_deviation_ratio, standard_deviation_time))
-
-            print(f"n={problem.getN()} k={problem.getK()} Completed")
+                # 1. Run the test and get the results tuple
+                # Unpack the result, ignoring the name since it's not needed for this format
+                _, n, k, minR, avgR, maxR, minT, avgT, maxT, stdR, stdT = self._run_single_test(problem)
+                
+                # 2. Append the result (excluding the name which is not used here)
+                results.append((n, k, minR, avgR, maxR, minT, avgT, maxT, stdR, stdT))
+                
+                # 3. Explicitly delete the local reference to the problem object
+                del problem
+                
+                print(f"n={n} k={k} Completed")
 
         return results
     
@@ -171,6 +157,9 @@ class ExperimentManager():
             test_name = problem.getName()
             results.append((test_name, problem.getN(), problem.getK(), ratio, total_time, distance))
             print(f"n={problem.getN()} k={problem.getK()} Completed")
+            
+            # Add explicit deletion here as well for consistency
+            del problem
 
         return results
 

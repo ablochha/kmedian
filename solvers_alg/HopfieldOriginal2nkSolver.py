@@ -22,8 +22,8 @@ class HopfieldOriginalSolver(KMPSolver):
         self._n = None
         self._k = None
         self._graph = None
-        self._num_rows = 0
-        self._num_cols = 0
+        self._num_rows = None
+        self._num_cols = None
         self._size = None
         self._facility_update_value = 1.0
         self._client_update_value = 1.0
