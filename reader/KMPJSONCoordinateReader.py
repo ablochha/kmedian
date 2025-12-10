@@ -32,8 +32,8 @@ class KMPJSONCoordinateReader(InputReader):
         k = data['k']
         optimal_distance = data['optimal_solution']
 
-        x = data.pop("x_values")
-        y = data.pop("y_values")
+        x = data["x_values"]
+        y = data["y_values"]
         graph = CoordinateGraph(x, y, use_gpu)
 
         problem = KMProblem(name ,graph, n, k, optimal_distance)

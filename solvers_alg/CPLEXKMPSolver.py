@@ -27,6 +27,8 @@ class CPLEXKMPSolver(KMPSolver):
         self._X = {}
         self._F = {}
 
+        self._mipGap = None
+
     def initialize(self, problem: KMProblem):
         self._graph = problem.getGraph()
         self._n = problem.getN()
@@ -77,6 +79,9 @@ class CPLEXKMPSolver(KMPSolver):
 
     def getSelectedFacilities(self):
         return self._selectedFacilities
+    
+    def getMIPGap(self):
+        return self._mipGap
 
     def setN(self, n):
         self._n = n
@@ -90,8 +95,7 @@ class CPLEXKMPSolver(KMPSolver):
     def solve(self, max_time=None):
         # map time limit if provided
         if max_time is not None:
-            self._model.parameters.timelimit = max_time
-
+            self._model.set_time_limit(max_time)
         # solve the model
         solution = self._model.solve(log_output=False)
 
@@ -111,6 +115,8 @@ class CPLEXKMPSolver(KMPSolver):
         self._selectedFacilities = selected_facilities
         # compute objective value using your helper
         self._solutionValue = calculate_distance(self._graph, selected_facilities, self._n)
+        self._mipGap = self._model.get_solve_details().mip_relative_gap
+        self._model.end()     # Frees all CPLEX internal memory
 
     def warm_start(self, solution, client_connections):
         """Attempt to warm-start the solver by setting start values on variables.

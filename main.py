@@ -31,7 +31,7 @@ from utils.user_input import get_input_arguments
 def get_data_path(key):
     """Return the full path to a dataset folder based on its key, using paths.txt mappings."""
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    resources_dir = os.path.join(base_dir, 'resources')
+    resources_dir = os.path.join(base_dir, 'resources/KMP')
     paths_file = os.path.join(resources_dir, 'paths.txt')
 
     # Read mappings from paths.txt

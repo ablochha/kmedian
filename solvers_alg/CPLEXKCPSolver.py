@@ -1,7 +1,6 @@
 from docplex.mp.model import Model
 
 from problems.KCProblem import KCProblem
-from solvers.brute_solver import calculate_distance
 from solvers_alg.KCPSolver import KCPSolver
 
 
@@ -29,6 +28,8 @@ class CPLEXKCPSolver(KCPSolver):
         self._X = {}
         self._F = {}
         self._R = None
+
+        self._mipGap = None
 
     def initialize(self, problem: KCProblem):
         self._graph = problem.getGraph()
@@ -90,6 +91,9 @@ class CPLEXKCPSolver(KCPSolver):
     def getSelectedFacilities(self):
         return self._selectedFacilities
     
+    def getMIPGap(self):
+        return self._mipGap
+    
     def setN(self, n):
         self._n = n
 
@@ -101,7 +105,7 @@ class CPLEXKCPSolver(KCPSolver):
 
     def solve(self, max_time=None):
         if max_time is not None:
-            self._model.parameters.timelimit = max_time
+            self._model.set_time_limit(max_time)
 
         solution = self._model.solve(log_output=False)
 
@@ -118,8 +122,10 @@ class CPLEXKCPSolver(KCPSolver):
                 selected_facilities.append(int(facility))
 
         self._selectedFacilities = selected_facilities
-        # compute objective value using your helper
-        self._solutionValue = calculate_distance(self._graph, selected_facilities, self._n)
+        self._solutionValue = solution.get_value(self._R)
+
+        self._mipGap = self._model.solve_details.mip_relative_gap
+        self._model.end()     # Frees all CPLEX internal memory
 
     def warm_start(self, solution, client_connections):
         """Warm-start the k-center solver by setting start values on variables.
