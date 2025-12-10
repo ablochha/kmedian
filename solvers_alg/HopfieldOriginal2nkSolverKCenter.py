@@ -10,7 +10,7 @@ from solvers_alg.KCPSolver import KCPSolver
 FACILITY = 1
 CLIENT = 0
 
-class HopfieldOriginal2nkSolver(KCPSolver):
+class HopfieldOriginal2nkSolverKCenter(KCPSolver):
     def __init__(self, use_gpu):
         # Initialize Variables for Solver
         self._name = "Hopfield (original 2nk) - K-Center Problem"
