@@ -1,9 +1,9 @@
 {
-    "format": 2,
+    "format": 5,
     "name": "n60k6_12",
     "n": 60,
     "k": 6,
-    "optimal_solution": 9.78515625,
+    "optimal_solution": 0.3055955171585083,
     "x_values": [
         0.5912604331970215,
         0.8213425278663635,

@@ -96,7 +96,7 @@ class LocalSearchSolverKCenter(KCPSolver):
                             # if our change in distance reaches a certain threshold we stop.
                             # We use the formula from 'Effectiveness of Local Search for Geometric Optimization'
                             # (Cohen-Addad and Mathieu 2015).
-                            if new_radius > (1 - (1 / self._n)) * best_radius:
+                            if new_radius < (1 - (1 / self._n)) * best_radius:
                                 best_radius = new_radius
                                 has_swapped = True
                                 break
@@ -125,9 +125,9 @@ class LocalSearchSolverKCenter(KCPSolver):
         distances = self._graph._normalized_distances[:, facility_mask]
 
         # Closest facility for each client
-        min_dist_per_client, _ = torch.max(distances, dim=1)
+        min_dist_per_client, _ = torch.min(distances, dim=1)
 
         # Worst-covered client → radius
-        radius = torch.min(min_dist_per_client)
+        radius = torch.max(min_dist_per_client)
 
         return radius.item()

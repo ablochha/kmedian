@@ -90,6 +90,26 @@ def calculate_distance(graph, facilities, n=None):
     # sum up the distances to get the total distance
     return float(torch.sum(min_values))
 
+def calculate_radius(graph, facilities):
+    """
+    Compute the k-center radius given a set of facilities.
+
+    :param graph: object containing the distance matrix `graph._distances` (NxN tensor)
+    :param facilities: list or tensor of facility indices
+    :return: the k-center radius (max distance from any client to nearest facility)
+    """
+    # Create a subgraph: each column corresponds to a facility
+    distance_subgraph = graph._distances[:, facilities]  # shape: (n_clients, n_facilities)
+
+    # For each client, find distance to closest facility
+    min_distances, _ = torch.min(distance_subgraph, dim=1)  # shape: (n_clients,)
+
+    # k-center radius = worst-covered client
+    radius = torch.max(min_distances)
+
+    return float(radius)
+
+
 
 
 def get_facilities(h, n, k):

@@ -1,6 +1,7 @@
+args = {}
 def get_input_arguments():
-    args = {}
-
+    
+    args["problem_family"] = get_problem_family()
     args["algorithm"] = get_algorithm()
     args["parameters"] = get_parameters(args["algorithm"])
     args["dataset"] = get_datasets()
@@ -9,26 +10,46 @@ def get_input_arguments():
     return args
 
 
+def get_problem_family():
+    print("\nSelect problem family:")
+    print("\t1: K-Median Problem (KMP)")
+    print("\t2: K-Center Problem (KCP)")
+    print("\t3: Capacitated K-Median Problem (CKMP)")
+
+    return input("Enter a value 1-3: ")
+
+
 def get_algorithm():
     print("Select Algorithm:")
-    print("\t1: Modified Hopfield Algorithm")
-    print("\t2: Haralampiev's Algorithm")
-    print("\t3: Local Search Algorithm")
-    print("\t4: Zhu's algorithm MRA")
-    print("\t5: Arya Multi Swap")
-    print("\t6: Cohen-Addad Local Search")
-    print("\t7: Cohen-Addad's Multi Swap")
-    print("\t8: 2nk Original Single Hopfield")
-    print("\t9: 2nk Best Half Single Hopfield")
-    print("\t10: 2nk Best Half Multi Hopfield")
-    print("\t11: 2nk Best Half Second Closest Hopfield")
-    print("\t12: 2nk Exhaustive Hopfield")
-    print("\t13: Fast Interchange")
-    print("\t14: Dominguez NAL")
+    if args["problem_family"] == "1":
+        print("\t1: Modified Hopfield Algorithm")
+        print("\t2: Haralampiev's Algorithm")
+        print("\t3: Local Search Algorithm")
+        print("\t4: Zhu's algorithm MRA")
+        print("\t5: Arya Multi Swap")
+        print("\t6: Cohen-Addad Local Search")
+        print("\t7: Cohen-Addad's Multi Swap")
+        print("\t8: 2nk Original Single Hopfield")
+        print("\t9: 2nk Best Half Single Hopfield")
+        print("\t10: 2nk Best Half Multi Hopfield")
+        print("\t11: 2nk Best Half Second Closest Hopfield")
+        print("\t12: 2nk Exhaustive Hopfield")
+        print("\t13: Fast Interchange")
+        print("\t14: Dominguez NAL")
+        return input("Enter a value 1-14: ")
     
-
-    return input("Enter a value 1-15: ")
-
+    elif args["problem_family"] == "2":
+        print("\t1: 2nk Original Single Hopfield K-center")
+        print("\t2: Local Search Algorithm K-center")
+        return input("Enter a value 1-2: ")
+    
+    elif args["problem_family"] == "3":
+        print("\t1: 2nk Original Single Hopfield Capacitated K-median")
+        return input("Enter a value 1: ")
+    
+    else:
+        print("Invalid problem family selection.")
+        return None
 
 def get_parameters(algorithm_selection):
     parameters = {}
@@ -184,6 +205,33 @@ def get_parameters(algorithm_selection):
         
     # Dominguez NAL
     if algorithm_selection == "14":
+        input_runs = input("\nEnter Number of Runs (Default is 1): ")
+        if len(input_runs) == 0:
+            print("Using default: 1 run")
+            parameters["runs"] = 1
+        else:
+            parameters["runs"] = int(input_runs)
+        return parameters
+    
+    if algorithm_selection == "15":
+        input_runs = input("\nEnter Number of Runs (Default is 1): ")
+        if len(input_runs) == 0:
+            print("Using default: 1 run")
+            parameters["runs"] = 1
+        else:
+            parameters["runs"] = int(input_runs)
+        return parameters
+    
+    if algorithm_selection == "16":
+        max_time = input("\nEnter Maximum runtime in seconds (Default is 5): ")
+        if len(max_time) == 0:
+            print("Using default: 5")
+            parameters["max_time"] = 5
+        else:
+            parameters["max_time"] = int(max_time)
+        return parameters
+    
+    if algorithm_selection == "17":
         input_runs = input("\nEnter Number of Runs (Default is 1): ")
         if len(input_runs) == 0:
             print("Using default: 1 run")

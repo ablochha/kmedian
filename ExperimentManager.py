@@ -5,8 +5,7 @@ import time
 
 import numpy as np
 
-from problems.KMProblem import KMProblem
-from solvers.brute_solver import calculate_distance
+from solvers.brute_solver import calculate_distance, calculate_radius
 from solvers_alg.AryaMultiSolver import AryaMultiSolver
 from solvers_alg.CohenAddadMultiSolver import CohenAddadMultiSolver
 from solvers_alg.CohenAddadSolver import CohenAddadSolver
@@ -21,16 +20,20 @@ from solvers_alg.HopfieldBestHalfSingleSolver import \
     HopfieldBestHalfSingleSolver
 from solvers_alg.HopfieldExhaustiveAlgorithmSolver import \
     HopfieldExhaustiveAlgorithmSolver
+from solvers_alg.HopfieldOriginal2nkCKMPSolver import \
+    HopfieldOriginal2nkCKMPSolver
 from solvers_alg.HopfieldOriginal2nkSolver import HopfieldOriginalSolver
 from solvers_alg.InterchangeAlgorithmSolver import InterchangeAlgorithmSolver
 from solvers_alg.LocalSearchSolver import LocalSearchSolver
+from solvers_alg.LocalSearchSolverKCenter import LocalSearchSolverKCenter
 from solvers_alg.ZhuAlgorithmSolver import ZhuAlgorithmSolver
 
 
 class ExperimentManager():
-    def __init__(self, problems, solver, num_runs=None):
+    def __init__(self, problems, solver, problem_family, num_runs=None):
         self._problems = problems
         self._solver = solver
+        self._problem_family = problem_family
         if(num_runs == None):
             self._num_runs = 10
         else:
@@ -79,10 +82,16 @@ class ExperimentManager():
             if elapsedTime < minTime:
                 minTime = elapsedTime
 
-            distance = calculate_distance(problem.getGraph(), facilities, problem.getN())
+            if self._problem_family == "1" or self._problem_family == "3":
+                distance = calculate_distance(problem.getGraph(), facilities, problem.getN())
+            elif self._problem_family == "2":
+                distance = calculate_radius(problem.getGraph(), facilities)
+            else:
+                raise ValueError("Unknown problem family")
+            
             approximationRatio = distance / optimal_distance
             ratios.append(approximationRatio)
-            
+
             if approximationRatio > maxRatio:
                 maxRatio = approximationRatio
             if approximationRatio < minRatio:
@@ -152,7 +161,13 @@ class ExperimentManager():
             end_time = time.time()
             total_time = end_time - start_time
 
-            distance = calculate_distance(problem.getGraph(), facilities, problem.getN())
+            if self._problem_family == "1" or self._problem_family == "3":
+                distance = calculate_distance(problem.getGraph(), facilities, problem.getN())
+            elif self._problem_family == "2":
+                distance = calculate_radius(problem.getGraph(), facilities)
+            else:
+                raise ValueError("Unknown problem family")
+            
             ratio = distance / optimal_distance
             test_name = problem.getName()
             results.append((test_name, problem.getN(), problem.getK(), ratio, total_time, distance))

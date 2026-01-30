@@ -4,6 +4,7 @@ import numpy as np
 import torch
 
 from problems.KCProblem import KCProblem
+from solvers.brute_solver import calculate_radius
 from solvers_alg.KCPSolver import KCPSolver
 
 # Constants for update type.
@@ -117,7 +118,7 @@ class HopfieldOriginal2nkSolverKCenter(KCPSolver):
 
     def solve(self, runNum=None, starter_facilities=None):
         best_facilities = starter_facilities
-        best_distance = self.calculate_radius(self._graph, best_facilities)
+        best_distance = calculate_radius(self._graph, best_facilities) if starter_facilities else None
 
         completed = 0
         import time
@@ -177,9 +178,7 @@ class HopfieldOriginal2nkSolverKCenter(KCPSolver):
             self.facility_col.index_copy_(0, inactive_idx, s_reduced)                                # (n-k,)
             """
 
-            # Now we need to take the sum of each row from candidate inner value, and put it in correct spot for facility inner value
-            # max_indices[worstFacility] is the cluster we’re updating
-            self._facility_inner_values[:, max_indices[worstFacility]] = torch.min(self._candidatefacility_inner_values, dim=1)
+            self._facility_inner_values[:, max_indices[worstFacility]] = torch.max(self._candidatefacility_inner_values, dim=1).values
             
             # Sort the facilities again
             bestFacility = torch.argmax(self._facility_inner_values[:, max_indices[worstFacility]])    
@@ -273,35 +272,16 @@ class HopfieldOriginal2nkSolverKCenter(KCPSolver):
             print()
         """
 
-    def calculate_radius(graph, facilities):
-        if facilities is None or len(facilities) == 0:
-            return None
-
-        distances = torch.tensor(graph.distance_cache[:, facilities])
-        # closest facility per client
-        min_dist_per_client, _ = torch.max(distances, dim=1)
-        # worst client = k-center radius
-        return torch.min(min_dist_per_client).item()
-
-
     def _calculate_facilities_and_distance(self):
     
         selected_facilities = []
-        
+
         for i in range(self._n):
-        
-            if self._facilities[0,i] == 1:
-            
+            if self._facilities[0, i] == 1:
                 selected_facilities.append(i)
-                
-        # Compute k-center radius
-        # D is the original distance matrix, not D'
-        distances_to_facilities = self._graph.distance_cache[:, selected_facilities]  # shape (n, k)
-        # For each client: pick the CLOSEST facility → max
-        best_dist_per_client, _ = torch.max(torch.tensor(distances_to_facilities), dim=1)
-        # Radius should reflect the WORST (furthest) client → minmum of best distances
-        radius = torch.min(best_dist_per_client).item()
-        
+
+        radius = calculate_radius(self._graph, selected_facilities)
+
         return selected_facilities, radius
 
     def _create_distance_array(self):
@@ -319,7 +299,7 @@ class HopfieldOriginal2nkSolverKCenter(KCPSolver):
         # The min fucntion could assume the inactive clients are what we are looking for, so mask them before looking for the minimum
         masked = self._client_inner_values.clone()
         masked[self._client_activation_values == 0] = float('inf')
-        self._facility_inner_values[self._active_facility_list,self._k_indices] = torch.min(masked, dim=0)
+        self._facility_inner_values[self._active_facility_list,self._k_indices] = torch.max(masked, dim=0).values
 
     def _update_client(self):
         

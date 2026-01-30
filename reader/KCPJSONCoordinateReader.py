@@ -1,6 +1,6 @@
 import json
 
-from problems.KCProblem import KCPProblem
+from problems.KCProblem import KCProblem
 from reader.InputReader import InputReader
 from utils.graph import CoordinateGraph
 
@@ -36,6 +36,6 @@ class KCPJSONCoordinateReader(InputReader):
         y = data["y_values"]
         graph = CoordinateGraph(x, y, use_gpu)
 
-        problem = KCPProblem(name ,graph, n, k, optimal_distance)
+        problem = KCProblem(name ,graph, n, k, optimal_distance)
 
         return problem
