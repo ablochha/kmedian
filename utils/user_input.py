@@ -53,192 +53,195 @@ def get_algorithm():
 
 def get_parameters(algorithm_selection):
     parameters = {}
-    
-    # n + n^2 Hopfield parameters
-    if algorithm_selection == "1":
-        input_runs = input("\nEnter Number of Runs (Default is 1): ")
-        if len(input_runs) == 0:
-            print("Using default: 1 run")
-            parameters["runs"] = 1
-        else:
-            parameters["runs"] = int(input_runs)
-        return parameters
-    
-    # Haralampiev Parameters
-    elif algorithm_selection == "2":
-        input_runs = input("\nEnter Number of Runs (Default is 1): ")
-        if len(input_runs) == 0:
-            print("Using default: 1 run")
-            parameters["runs"] = 1
-        else:
-            parameters["runs"] = int(input_runs)
-        input_temp = input("\nEnter Starting Temperature (Default is 1.0): ")
-        if len(input_temp) == 0:
-            print("Using default: 1.0")
-            parameters["temperature"] = 1.0
-        else:
-            parameters["temperature"] = float(input_temp)
-        input_epoch = input("\nEnter Epoch Length integer. Leave empty to use the dataset n values: ")
-        if len(input_epoch) == 0:
-            print("Using default: n")
-            parameters["epoch"] = None
-        else:
-            parameters["epoch"] = int(input_epoch)
-        input_decay = input("\nEnter Decay Interval (Default is 3): ")
-        if len(input_decay) == 0:
-            print("Using default: 3")
-            parameters["decay"] = 3
-        else:
-            parameters["decay"] = int(input_decay)
 
-        return parameters
-    
-    # Local Search Parameters
-    elif algorithm_selection == "3":
-        max_time = input("\nEnter Maximum runtime in seconds (Default is 5): ")
-        if len(max_time) == 0:
-            print("Using default: 5")
-            parameters["max_time"] = 5
-        else:
-            parameters["max_time"] = int(max_time)
-        return parameters
-    
-    # Zhu's algorith MRA
-    elif algorithm_selection == "4":
-        max_time = input("\nEnter Maximum runtime in seconds (Default is 5): ")
-        if len(max_time) == 0:
-            print("Using default: 5")
-            parameters["max_time"] = 5
-        else:
-            parameters["max_time"] = int(max_time)
-        return parameters
+    if args["problem_family"] == "1":  
+        # n + n^2 Hopfield parameters
+        if algorithm_selection == "1":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
         
-    # Arya Multi Swap
-    elif algorithm_selection == "5":
-        max_time = input("\nEnter Maximum runtime in seconds (Default is 5): ")
-        if len(max_time) == 0:
-            print("Using default: 5")
-            parameters["max_time"] = 5
-        else:
-            parameters["max_time"] = int(max_time)
-        return parameters
+        # Haralampiev Parameters
+        elif algorithm_selection == "2":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            input_temp = input("\nEnter Starting Temperature (Default is 1.0): ")
+            if len(input_temp) == 0:
+                print("Using default: 1.0")
+                parameters["temperature"] = 1.0
+            else:
+                parameters["temperature"] = float(input_temp)
+            input_epoch = input("\nEnter Epoch Length integer. Leave empty to use the dataset n values: ")
+            if len(input_epoch) == 0:
+                print("Using default: n")
+                parameters["epoch"] = None
+            else:
+                parameters["epoch"] = int(input_epoch)
+            input_decay = input("\nEnter Decay Interval (Default is 3): ")
+            if len(input_decay) == 0:
+                print("Using default: 3")
+                parameters["decay"] = 3
+            else:
+                parameters["decay"] = int(input_decay)
+
+            return parameters
         
-    # Cohen-Addad Local Search
-    elif algorithm_selection == "6":
-        max_time = input("\nEnter Maximum runtime in seconds (Default is 5): ")
-        if len(max_time) == 0:
-            print("Using default: 5")
-            parameters["max_time"] = 5
-        else:
-            parameters["max_time"] = int(max_time)
-        return parameters
+        # Local Search Parameters
+        elif algorithm_selection == "3":
+            max_time = input("\nEnter Maximum runtime in seconds (Default is 5): ")
+            if len(max_time) == 0:
+                print("Using default: 5")
+                parameters["max_time"] = 5
+            else:
+                parameters["max_time"] = int(max_time)
+            return parameters
         
-    # Cohen-Addad Multi Swap
-    elif algorithm_selection == "7":
-        max_time = input("\nEnter Maximum runtime in seconds (Default is 5): ")
-        if len(max_time) == 0:
-            print("Using default: 5")
-            parameters["max_time"] = 5
-        else:
-            parameters["max_time"] = int(max_time)
-        return parameters
+        # Zhu's algorith MRA
+        elif algorithm_selection == "4":
+            max_time = input("\nEnter Maximum runtime in seconds (Default is 5): ")
+            if len(max_time) == 0:
+                print("Using default: 5")
+                parameters["max_time"] = 5
+            else:
+                parameters["max_time"] = int(max_time)
+            return parameters
+            
+        # Arya Multi Swap
+        elif algorithm_selection == "5":
+            max_time = input("\nEnter Maximum runtime in seconds (Default is 5): ")
+            if len(max_time) == 0:
+                print("Using default: 5")
+                parameters["max_time"] = 5
+            else:
+                parameters["max_time"] = int(max_time)
+            return parameters
+            
+        # Cohen-Addad Local Search
+        elif algorithm_selection == "6":
+            max_time = input("\nEnter Maximum runtime in seconds (Default is 5): ")
+            if len(max_time) == 0:
+                print("Using default: 5")
+                parameters["max_time"] = 5
+            else:
+                parameters["max_time"] = int(max_time)
+            return parameters
+            
+        # Cohen-Addad Multi Swap
+        elif algorithm_selection == "7":
+            max_time = input("\nEnter Maximum runtime in seconds (Default is 5): ")
+            if len(max_time) == 0:
+                print("Using default: 5")
+                parameters["max_time"] = 5
+            else:
+                parameters["max_time"] = int(max_time)
+            return parameters
+            
+        # 2nk Original Single Hopfield parameters
+        if algorithm_selection == "8":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+            
+        # 2nk Best Half Single Hopfield parameters
+        if algorithm_selection == "9":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+            
+        # 2nk Best Half Multi Hopfield parameters
+        if algorithm_selection == "10":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+            
+        # 2nk Best Half Single Second Closest Hopfield parameters
+        if algorithm_selection == "11":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+            
+        # 2nk Exhaustive Hopfield parameters
+        if algorithm_selection == "12":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+            
+        # Fast Interchange
+        if algorithm_selection == "13":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+            
+        # Dominguez NAL
+        if algorithm_selection == "14":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
         
-    # 2nk Original Single Hopfield parameters
-    if algorithm_selection == "8":
-        input_runs = input("\nEnter Number of Runs (Default is 1): ")
-        if len(input_runs) == 0:
-            print("Using default: 1 run")
-            parameters["runs"] = 1
-        else:
-            parameters["runs"] = int(input_runs)
-        return parameters
+    elif args["problem_family"] == "2":
+        if algorithm_selection == "1":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
         
-    # 2nk Best Half Single Hopfield parameters
-    if algorithm_selection == "9":
-        input_runs = input("\nEnter Number of Runs (Default is 1): ")
-        if len(input_runs) == 0:
-            print("Using default: 1 run")
-            parameters["runs"] = 1
-        else:
-            parameters["runs"] = int(input_runs)
-        return parameters
+        if algorithm_selection == "2":
+            max_time = input("\nEnter Maximum runtime in seconds (Default is 5): ")
+            if len(max_time) == 0:
+                print("Using default: 5")
+                parameters["max_time"] = 5
+            else:
+                parameters["max_time"] = int(max_time)
+            return parameters
         
-    # 2nk Best Half Multi Hopfield parameters
-    if algorithm_selection == "10":
-        input_runs = input("\nEnter Number of Runs (Default is 1): ")
-        if len(input_runs) == 0:
-            print("Using default: 1 run")
-            parameters["runs"] = 1
-        else:
-            parameters["runs"] = int(input_runs)
-        return parameters
-        
-    # 2nk Best Half Single Second Closest Hopfield parameters
-    if algorithm_selection == "11":
-        input_runs = input("\nEnter Number of Runs (Default is 1): ")
-        if len(input_runs) == 0:
-            print("Using default: 1 run")
-            parameters["runs"] = 1
-        else:
-            parameters["runs"] = int(input_runs)
-        return parameters
-        
-    # 2nk Exhaustive Hopfield parameters
-    if algorithm_selection == "12":
-        input_runs = input("\nEnter Number of Runs (Default is 1): ")
-        if len(input_runs) == 0:
-            print("Using default: 1 run")
-            parameters["runs"] = 1
-        else:
-            parameters["runs"] = int(input_runs)
-        return parameters
-        
-    # Fast Interchange
-    if algorithm_selection == "13":
-        input_runs = input("\nEnter Number of Runs (Default is 1): ")
-        if len(input_runs) == 0:
-            print("Using default: 1 run")
-            parameters["runs"] = 1
-        else:
-            parameters["runs"] = int(input_runs)
-        return parameters
-        
-    # Dominguez NAL
-    if algorithm_selection == "14":
-        input_runs = input("\nEnter Number of Runs (Default is 1): ")
-        if len(input_runs) == 0:
-            print("Using default: 1 run")
-            parameters["runs"] = 1
-        else:
-            parameters["runs"] = int(input_runs)
-        return parameters
-    
-    if algorithm_selection == "15":
-        input_runs = input("\nEnter Number of Runs (Default is 1): ")
-        if len(input_runs) == 0:
-            print("Using default: 1 run")
-            parameters["runs"] = 1
-        else:
-            parameters["runs"] = int(input_runs)
-        return parameters
-    
-    if algorithm_selection == "16":
-        max_time = input("\nEnter Maximum runtime in seconds (Default is 5): ")
-        if len(max_time) == 0:
-            print("Using default: 5")
-            parameters["max_time"] = 5
-        else:
-            parameters["max_time"] = int(max_time)
-        return parameters
-    
-    if algorithm_selection == "17":
-        input_runs = input("\nEnter Number of Runs (Default is 1): ")
-        if len(input_runs) == 0:
-            print("Using default: 1 run")
-            parameters["runs"] = 1
-        else:
-            parameters["runs"] = int(input_runs)
-        return parameters
+    elif args["problem_family"] == "3":
+        if algorithm_selection == "17":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
 
     return None
 
