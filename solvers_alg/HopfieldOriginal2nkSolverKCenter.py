@@ -238,39 +238,9 @@ class HopfieldOriginal2nkSolverKCenter(KCPSolver):
             self._active_facility_list.append(value)
             index = index + 1
         
-        """
-        if self.verbose is True:
-            print("These are the initial random activation values")
-            print(self._facility_activation_values)
-            print("")
-        """
-        
         self._calculate_client_values()
-        
-        """
-        if self.verbose is True:
-            print("These are the initial client inner values")
-            print(self._client_inner_values)
-            print()
-        """
-        
         self._update_client()
-        
-        """
-        if self.verbose is True:
-            print("These are the inital client activation values")
-            print(self._client_activation_values)
-            print()
-        """
-
         self._calculate_facility_values()
-        
-        """
-        if self.verbose is True:
-            print("These are the initial facility inner values")
-            print(self._facility_inner_values)
-            print()
-        """
 
     def _calculate_facilities_and_distance(self):
     

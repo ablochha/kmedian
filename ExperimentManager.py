@@ -23,6 +23,8 @@ from solvers_alg.HopfieldExhaustiveAlgorithmSolver import \
 from solvers_alg.HopfieldOriginal2nkCKMPSolver import \
     HopfieldOriginal2nkCKMPSolver
 from solvers_alg.HopfieldOriginal2nkSolver import HopfieldOriginalSolver
+from solvers_alg.HopfieldParallelCKMSolver import HopfieldParallelCKMSolver
+from solvers_alg.HopfieldParallelKCPSolver import HopfieldParallelKCPSolver
 from solvers_alg.InterchangeAlgorithmSolver import InterchangeAlgorithmSolver
 from solvers_alg.LocalSearchSolver import LocalSearchSolver
 from solvers_alg.LocalSearchSolverKCenter import LocalSearchSolverKCenter
@@ -34,25 +36,28 @@ class ExperimentManager():
         self._problems = problems
         self._solver = solver
         self._problem_family = problem_family
+        self._latest_results = []
         if(num_runs == None):
             self._num_runs = 10
         else:
             self._num_runs = num_runs
 
     def run(self, dataset_key):
+        self._latest_results = []
+
         if dataset_key in ["4", "5"]:
             # Case 1: list of test sets
-            results = self._run_from_list()
+            self._run_from_list(dataset_key)
         elif dataset_key in ["1", "2", "3"]:
             # Case 2: dict of directories (e.g., {"pmed": tests_object})
-            results = self._run_from_directory_dict()
+            self._run_from_directory_dict(dataset_key)
         elif dataset_key == "6":
-            results = self._run_special()
+            self._run_special(dataset_key)
         else:
             raise TypeError("Did not pass a list of problems to Experiment Manage")
 
         # Save results
-        self._save_results_to_csv(results, dataset_key)
+        self._save_results_to_csv(self._latest_results, dataset_key)
 
     def _run_single_test(self, problem):
         """Helper function to run a single problem instance multiple times."""
@@ -108,83 +113,91 @@ class ExperimentManager():
                 maxTime, standard_deviation_ratio, standard_deviation_time)
 
 
-    def _run_from_list(self):
-        results = []
+    def _run_from_list(self, dataset_key):
         for problem in self._problems:
-            # 1. Run the test and get the results tuple
-            # This calls the solver initialization once per problem instance
-            result_tuple = self._run_single_test(problem)
-            
-            # 2. Append the result
-            results.append(result_tuple)
-            
-            # 3. Explicitly delete the local reference to the problem object
-            # This frees up the memory for the large graph/tensors sooner.
+            test_name = problem.getName()
             n = problem.getN()
             k = problem.getK()
-            del problem 
-            
-            print(f"n={n} k={k} Completed")
-
-        return results
-    
-
-    def _run_from_directory_dict(self):
-        results = []
-
-        for key, problem_list in self._problems.items():
-            for problem in problem_list:
+            try:
                 # 1. Run the test and get the results tuple
-                # Unpack the result, ignoring the name since it's not needed for this format
-                _, n, k, minR, avgR, maxR, minT, avgT, maxT, stdR, stdT = self._run_single_test(problem)
+                # This calls the solver initialization once per problem instance
+                result_tuple = self._run_single_test(problem)
                 
-                # 2. Append the result (excluding the name which is not used here)
-                results.append((n, k, minR, avgR, maxR, minT, avgT, maxT, stdR, stdT))
-                
-                # 3. Explicitly delete the local reference to the problem object
-                del problem
+                # 2. Append the result
+                self._latest_results.append(result_tuple)
                 
                 print(f"n={n} k={k} Completed")
-
-        return results
+            except Exception as e:
+                print(f"⚠️ Skipped {test_name} (n={n}, k={k}): {type(e).__name__}: {e}")
+            finally:
+                # 3. Explicitly delete the local reference to the problem object
+                # This frees up the memory for the large graph/tensors sooner.
+                del problem
     
-    def _run_special(self):
-        results = []
 
+    def _run_from_directory_dict(self, dataset_key):
+        for key, problem_list in self._problems.items():
+            for problem in problem_list:
+                test_name = problem.getName()
+                n = problem.getN()
+                k = problem.getK()
+                try:
+                    # 1. Run the test and get the results tuple
+                    # Unpack the result, ignoring the name since it's not needed for this format
+                    _, n, k, minR, avgR, maxR, minT, avgT, maxT, stdR, stdT = self._run_single_test(problem)
+                    
+                    # 2. Append the result (excluding the name which is not used here)
+                    self._latest_results.append((n, k, minR, avgR, maxR, minT, avgT, maxT, stdR, stdT))
+                    
+                    print(f"n={n} k={k} Completed")
+                except Exception as e:
+                    print(f"⚠️ Skipped {test_name} (n={n}, k={k}): {type(e).__name__}: {e}")
+                finally:
+                    # 3. Explicitly delete the local reference to the problem object
+                    del problem
+    
+    def _run_special(self, dataset_key):
         for problem in self._problems:
-            optimal_distance = problem.getOptimal()
-            self._solver.initialize(problem)
-
-            start_time = time.time()
-            self._solver.solve()
-            facilities = self._solver.getSelectedFacilities()
-            end_time = time.time()
-            total_time = end_time - start_time
-
-            if self._problem_family == "1" or self._problem_family == "3":
-                distance = calculate_distance(problem.getGraph(), facilities, problem.getN())
-            elif self._problem_family == "2":
-                distance = calculate_radius(problem.getGraph(), facilities)
-            else:
-                raise ValueError("Unknown problem family")
-            
-            ratio = distance / optimal_distance
             test_name = problem.getName()
-            results.append((test_name, problem.getN(), problem.getK(), ratio, total_time, distance))
-            print(f"n={problem.getN()} k={problem.getK()} Completed")
-            
-            # Add explicit deletion here as well for consistency
-            del problem
+            n = problem.getN()
+            k = problem.getK()
+            try:
+                optimal_distance = problem.getOptimal()
+                self._solver.initialize(problem)
 
-        return results
+                start_time = time.time()
+                self._solver.solve()
+                facilities = self._solver.getSelectedFacilities()
+                end_time = time.time()
+                total_time = end_time - start_time
+
+                if self._problem_family == "1" or self._problem_family == "3":
+                    distance = calculate_distance(problem.getGraph(), facilities, problem.getN())
+                elif self._problem_family == "2":
+                    distance = calculate_radius(problem.getGraph(), facilities)
+                else:
+                    raise ValueError("Unknown problem family")
+                
+                ratio = distance / optimal_distance
+                self._latest_results.append((test_name, n, k, ratio, total_time, distance))
+                print(f"n={n} k={k} Completed")
+            except Exception as e:
+                print(f"⚠️ Skipped {test_name} (n={n}, k={k}): {type(e).__name__}: {e}")
+            finally:
+                # Add explicit deletion here as well for consistency
+                del problem
 
 
-    def _save_results_to_csv(self, results, dataset_key):
+    def _save_results_to_csv(self, results, dataset_key, output_path=None, announce=True):
+        if len(results) == 0:
+            return
+
         if dataset_key in ["4", "5", "6"]:
             # Original value
             full_name = results[0][0]
             # Keep only the letters at the start
-            first_name = re.match(r"[a-zA-Z]+", full_name).group(0)
+            match = re.match(r"[a-zA-Z]+", full_name)
+            first_name = match.group(0) if match else "dataset"
             # Replace spaces just in case (optional)
             first_name = first_name.replace(" ", "_")
             output_filename = f"results_{first_name}.csv"
@@ -197,7 +210,8 @@ class ExperimentManager():
 
         # Get the directory where this file (ExperimentManager) is located
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        output_path = os.path.join(base_dir, output_filename)
+        if output_path is None:
+            output_path = os.path.join(base_dir, output_filename)
 
         # Build appropriate header
         if has_name and dataset_key in ["4", "5"]:
@@ -246,4 +260,5 @@ class ExperimentManager():
                         f"{std_ratio:.3f}", f"{std_time:.3f}"
                     ])
 
-        print(f"\n✅ Results saved to {output_path}")
+        if announce:
+            print(f"\n✅ Results saved to {output_path}")

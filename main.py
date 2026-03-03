@@ -27,6 +27,9 @@ from solvers_alg.HopfieldOriginal2nkCKMPSolver import \
 from solvers_alg.HopfieldOriginal2nkSolver import HopfieldOriginalSolver
 from solvers_alg.HopfieldOriginal2nkSolverKCenter import \
     HopfieldOriginal2nkSolverKCenter
+from solvers_alg.HopfieldParallelCKMSolver import HopfieldParallelCKMSolver
+from solvers_alg.HopfieldParallelKCPSolver import HopfieldParallelKCPSolver
+from solvers_alg.HopfieldParallelSolver import HopfieldParallelSolver
 from solvers_alg.InterchangeAlgorithmSolver import InterchangeAlgorithmSolver
 from solvers_alg.LocalSearchSolver import LocalSearchSolver
 from solvers_alg.LocalSearchSolverKCenter import LocalSearchSolverKCenter
@@ -316,6 +319,9 @@ if __name__ == '__main__':
                 case "14":
                     solver = DominguezAlgorithmSolver(use_gpu=args["use_gpu"])
 
+                case "15":
+                    solver = HopfieldParallelSolver(use_gpu=args["use_gpu"], seed=99)
+
         case "2":
             match args['algorithm']:
                 case "1":
@@ -324,10 +330,15 @@ if __name__ == '__main__':
                 case "2":
                     solver = LocalSearchSolverKCenter(max_time=args["parameters"]["max_time"])
 
+                case "3":
+                    solver = HopfieldParallelKCPSolver(use_gpu=args["use_gpu"])
+
         case "3":
             match args['algorithm']:
                 case "1":
                     solver = HopfieldOriginal2nkCKMPSolver(use_gpu=args["use_gpu"])
+                case "2":
+                    solver = HopfieldParallelCKMSolver(use_gpu=args["use_gpu"])
 
     problem_family = args["problem_family"]
 
