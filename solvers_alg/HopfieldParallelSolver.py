@@ -154,8 +154,7 @@ class HopfieldParallelSolver(KMPSolver):
 
         self._active_facility_list = []
 
-        # Use explicit warm start if provided; otherwise random-first greedy BUILD.
-        # if starter_facilities is not None:
+        # Use explicit warm start if provided; otherwise greedy BUILD.
         if starter_facilities is not None and len(starter_facilities) > 0:
             if len(starter_facilities) != self._k:
                 raise ValueError("starter_facilities must have length k.")
@@ -163,7 +162,7 @@ class HopfieldParallelSolver(KMPSolver):
                 raise ValueError(f"starter_facilities must be within [0, {self._matrix_n - 1}].")
             initial_facilities = list(starter_facilities)
         else:
-            initial_facilities = self._warm_start_facilities_greedy_random_first()
+            initial_facilities = self._warm_start_facilities_greedy_deterministic()
 
         index = 0
         for value in initial_facilities:
@@ -195,7 +194,7 @@ class HopfieldParallelSolver(KMPSolver):
     #
     #     return selected
 
-    # Optional deterministic greedy initializer (currently not used).
+    # Greedy BUILD initializer currently being used
     def _warm_start_facilities_greedy_deterministic(self) -> list[int]:
         # Work on CPU for simple deterministic indexing and masking.
         D = self._distance_values.detach().to("cpu")
@@ -227,6 +226,7 @@ class HopfieldParallelSolver(KMPSolver):
 
         return selected
 
+    # Optional random first greedy initializer (currently not used).
     def _warm_start_facilities_greedy_random_first(self) -> list[int]:
         D = self._distance_values.detach().to("cpu")
         num_candidates = D.shape[1]

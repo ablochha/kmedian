@@ -108,11 +108,11 @@ class HopfieldParallelCKMSolver(CKMPSolver):
             prev_C = self._client_activation_values.clone()
             prev_F = self._facility_activation_values.clone()
 
-            # Paper updates: (1) → (4)
+            # Client update
             self._calculate_client_values()
             self._update_client()
 
-            # Paper updates: (2) → (3)
+            # Facility updates
             self._calculate_facility_values()
             self._update_facility()
 
