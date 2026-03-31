@@ -37,13 +37,22 @@ def get_algorithm():
         print("\t13: Fast Interchange")
         print("\t14: Dominguez NAL")
         print("\t15: Parallel Hopfield Algorithm")
-        return input("Enter a value 1-15: ")
+        print("\t16: PAM Solver")
+        print("\t17: Parallel Hopfield Second Parallel Solver")
+        print("\t18: Parallel Hopfield Third Parallel Solver")
+        return input("Enter a value 1-18: ")
     
     elif args["problem_family"] == "2":
         print("\t1: 2nk Original Single Hopfield K-center")
         print("\t2: Local Search Algorithm K-center")
         print("\t3: Parallel Hopfield Algorithm K-center")
-        return input("Enter a value 1-3: ")
+        print("\t4: Farthest-First K-Center")
+        print("\t5: Farthest Client Reassignment K-Center")
+        print("\t6: Greedy Add Remove K-Center")
+        print("\t7: Drop Worst Facility K-Center")
+        print("\t8: Local Recenter K-Center")
+        print("\t9: Randomized Swap K-Center")
+        return input("Enter a value 1-9: ")
     
     elif args["problem_family"] == "3":
         print("\t1: 2nk Original Single Hopfield Capacitated K-median")
@@ -226,6 +235,33 @@ def get_parameters(algorithm_selection):
                 parameters["runs"] = int(input_runs)
             return parameters
         
+        if algorithm_selection == "16":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+        
+        if algorithm_selection == "17":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+        
+        if algorithm_selection == "18":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+        
     elif args["problem_family"] == "2":
         if algorithm_selection == "1":
             input_runs = input("\nEnter Number of Runs (Default is 1): ")
@@ -237,15 +273,69 @@ def get_parameters(algorithm_selection):
             return parameters
         
         if algorithm_selection == "2":
-            max_time = input("\nEnter Maximum runtime in seconds (Default is 5): ")
-            if len(max_time) == 0:
-                print("Using default: 5")
-                parameters["max_time"] = 5
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
             else:
-                parameters["max_time"] = int(max_time)
+                parameters["runs"] = int(input_runs)
             return parameters
         
         if algorithm_selection == "3":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+        
+        if algorithm_selection == "4":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+        
+        if algorithm_selection == "5":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+        
+        if algorithm_selection == "6":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+        
+        if algorithm_selection == "7":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+        
+        if algorithm_selection == "8":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+        
+        if algorithm_selection == "9":
             input_runs = input("\nEnter Number of Runs (Default is 1): ")
             if len(input_runs) == 0:
                 print("Using default: 1 run")

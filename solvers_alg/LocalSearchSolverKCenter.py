@@ -2,6 +2,7 @@ import random
 import sys
 import time
 
+from solvers.brute_solver import calculate_radius
 import torch
 
 from problems.KCProblem import KCProblem
@@ -9,7 +10,7 @@ from solvers_alg.KCPSolver import KCPSolver
 
 
 class LocalSearchSolverKCenter(KCPSolver):
-    def __init__(self, max_time, solution=None):
+    def __init__(self, run_time, solution=None):
         # Initialize Variables for Solver
         self._name = "Local Search K-Center"
         self._solutionValue = 0
@@ -18,7 +19,7 @@ class LocalSearchSolverKCenter(KCPSolver):
         self._graph = None
         self._n = None
         self._k = None
-        self._max_time = max_time
+        self._run_time = run_time
         self._check_counter = 0
         self._swap_counter = 0
 
@@ -26,6 +27,8 @@ class LocalSearchSolverKCenter(KCPSolver):
         self._vertices = None
 
         self._maxTime = 0
+
+        self._facilities = None 
 
     def initialize(self, problem:KCProblem):
         self._graph = problem.getGraph()
@@ -49,6 +52,9 @@ class LocalSearchSolverKCenter(KCPSolver):
                 vertices[value] = 1
 
         self._vertices = torch.tensor(vertices)
+
+        # keep facilities consistent with initial solution too
+        self._facilities = self._vertices.unsqueeze(0).clone()
 
         if self._n < 1000:
             self._maxTime = 5
@@ -80,22 +86,26 @@ class LocalSearchSolverKCenter(KCPSolver):
     def solve(self, runNum=None):
         start_time = time.time()
         best_radius = self.calculate_radius()
+
         while True:
             has_swapped = False
+
             for client in range(self._n):
                 if self._vertices[client] == 0:
                     self._check_counter += 1
+
                     # check every possible swap
                     for facility in range(self._n):
                         if time.time() - start_time >= self._maxTime:
                             break
+
                         if self._vertices[facility] == 1:
                             self._vertices[facility] = 0
                             self._vertices[client] = 1
+
                             new_radius = self.calculate_radius()
-                            # if our change in distance reaches a certain threshold we stop.
-                            # We use the formula from 'Effectiveness of Local Search for Geometric Optimization'
-                            # (Cohen-Addad and Mathieu 2015).
+
+                            # accept only sufficiently improving swaps
                             if new_radius < (1 - (1 / self._n)) * best_radius:
                                 best_radius = new_radius
                                 has_swapped = True
@@ -103,15 +113,20 @@ class LocalSearchSolverKCenter(KCPSolver):
                             else:
                                 self._vertices[facility] = 1
                                 self._vertices[client] = 0
-                    if has_swapped is True:
+
+                    if has_swapped:
                         self._swap_counter += 1
                         break
+
             # if we have no better candidate we stop
             if not has_swapped:
                 break
 
-        self._selectedFacilities = [i for i in range(self._n) if self._vertices[i] == 1]
-        self._solutionValue = best_radius
+        # copy final solution into facilities representation
+        self._facilities = self._vertices.unsqueeze(0).clone()
+
+        # derive selected facilities and radius from helper
+        self._selectedFacilities, self._solutionValue = self._calculate_facilities_and_distance()
 
     def calculate_radius(self):
         """
@@ -131,3 +146,15 @@ class LocalSearchSolverKCenter(KCPSolver):
         radius = torch.max(min_dist_per_client)
 
         return radius.item()
+    
+    def _calculate_facilities_and_distance(self):
+    
+        selected_facilities = []
+
+        for i in range(self._n):
+            if self._facilities[0, i] == 1:
+                selected_facilities.append(i)
+
+        radius = calculate_radius(self._graph, selected_facilities)
+
+        return selected_facilities, radius

@@ -10,6 +10,13 @@ from solvers_alg.AryaMultiSolver import AryaMultiSolver
 from solvers_alg.CohenAddadMultiSolver import CohenAddadMultiSolver
 from solvers_alg.CohenAddadSolver import CohenAddadSolver
 from solvers_alg.DominguezAlgorithmSolver import DominguezAlgorithmSolver
+from solvers_alg.DropWorstFacilityKCenterSolver import \
+    DropWorstFacilityKCenterSolver
+from solvers_alg.FarthestClientReassignmentKCenterSolver import \
+    FarthestClientReassignmentKCenterSolver
+from solvers_alg.FarthestFirstKCenterSolver import FarthestFirstKCenterSolver
+from solvers_alg.GreedyAddRemoveKCenterSolver import \
+    GreedyAddRemoveKCenterSolver
 from solvers_alg.HaralampievAlgorithmSolver import HaralampievAlgorithmSolver
 from solvers_alg.HopfieldAlgorithmSolver import HopfieldAlgorithmSolver
 from solvers_alg.HopfieldBestHalfMultiAlgorithmSolver import \
@@ -25,9 +32,15 @@ from solvers_alg.HopfieldOriginal2nkCKMPSolver import \
 from solvers_alg.HopfieldOriginal2nkSolver import HopfieldOriginalSolver
 from solvers_alg.HopfieldParallelCKMSolver import HopfieldParallelCKMSolver
 from solvers_alg.HopfieldParallelKCPSolver import HopfieldParallelKCPSolver
+from solvers_alg.HopfieldSecondParallelSolver import \
+    HopfieldSecondParallelSolver
+from solvers_alg.HopfieldThirdParallelSolver import HopfieldThirdParallelSolver
 from solvers_alg.InterchangeAlgorithmSolver import InterchangeAlgorithmSolver
+from solvers_alg.LocalRecenterKCenterSolver import LocalRecenterKCenterSolver
 from solvers_alg.LocalSearchSolver import LocalSearchSolver
 from solvers_alg.LocalSearchSolverKCenter import LocalSearchSolverKCenter
+from solvers_alg.PAMSolver import PAMSolver
+from solvers_alg.RandomizedSwapKCenterSolver import RandomizedSwapKCenterSolver
 from solvers_alg.ZhuAlgorithmSolver import ZhuAlgorithmSolver
 
 
@@ -37,10 +50,7 @@ class ExperimentManager():
         self._solver = solver
         self._problem_family = problem_family
         self._latest_results = []
-        if(num_runs == None):
-            self._num_runs = 10
-        else:
-            self._num_runs = num_runs
+        self._num_runs = num_runs
 
     def run(self, dataset_key):
         self._latest_results = []
@@ -62,7 +72,7 @@ class ExperimentManager():
     def _run_single_test(self, problem):
         """Helper function to run a single problem instance multiple times."""
         optimal_distance = problem.getOptimal()
-        
+
         ratios = []
         minRatio = 100.000
         maxRatio = 0.000
@@ -82,19 +92,28 @@ class ExperimentManager():
             elapsedTime = end_time - start_time
             times.append(elapsedTime)
 
+            # if self._problem_family == "1":  # k-median
+            #     verify_kmedian_solution(
+            #         graph=problem.getGraph(),
+            #         selected_facilities=facilities,
+            #         k=problem.getK(),
+            #         reported_cost=self._solver.getSolutionValue()
+            #     )
+
+            # elif self._problem_family == "2":  # k-center
+            #     verify_kcenter_solution(
+            #         graph=problem.getGraph(),
+            #         selected_facilities=facilities,
+            #         k=problem.getK(),
+            #         reported_radius=self._solver.getSolutionValue()
+            #     )
+
             if elapsedTime > maxTime:
                 maxTime = elapsedTime
             if elapsedTime < minTime:
                 minTime = elapsedTime
-
-            if self._problem_family == "1" or self._problem_family == "3":
-                distance = calculate_distance(problem.getGraph(), facilities, problem.getN())
-            elif self._problem_family == "2":
-                distance = calculate_radius(problem.getGraph(), facilities)
-            else:
-                raise ValueError("Unknown problem family")
             
-            approximationRatio = distance / optimal_distance
+            approximationRatio = self._solver.getSolutionValue() / optimal_distance
             ratios.append(approximationRatio)
 
             if approximationRatio > maxRatio:
@@ -262,3 +281,125 @@ class ExperimentManager():
 
         if announce:
             print(f"\n✅ Results saved to {output_path}")
+
+
+
+import math
+
+
+def verify_selected_facilities(selected_facilities, k):
+    """
+    Basic checks common to k-median and k-center.
+    """
+    if len(selected_facilities) != k:
+        raise ValueError(
+            f"Wrong number of selected facilities: got {len(selected_facilities)}, expected {k}"
+        )
+
+    if len(set(selected_facilities)) != k:
+        raise ValueError(
+            f"Duplicate facilities detected: {selected_facilities}"
+        )
+
+
+def recompute_kmedian_cost(graph, selected_facilities):
+    """
+    Independently recompute the uncapacitated k-median objective.
+
+    For each client node j:
+        cost += min distance from j to any selected facility
+    """
+    distance_matrix = graph._distances
+    n = distance_matrix.shape[0]
+
+    total_cost = 0.0
+
+    for client in range(n):
+        best_distance = math.inf
+        for facility in selected_facilities:
+            d = float(distance_matrix[facility, client])
+            if d < best_distance:
+                best_distance = d
+        total_cost += best_distance
+
+    return total_cost
+
+
+def recompute_kcenter_radius(graph, selected_facilities):
+    """
+    Independently recompute the k-center objective.
+
+    For each client node j:
+        nearest = min distance from j to any selected facility
+
+    Return:
+        max_j nearest(j)
+    """
+    distance_matrix = graph._distances
+    n = distance_matrix.shape[0]
+
+    radius = 0.0
+
+    for client in range(n):
+        best_distance = math.inf
+        for facility in selected_facilities:
+            d = float(distance_matrix[facility, client])
+            if d < best_distance:
+                best_distance = d
+        radius = max(radius, best_distance)
+
+    return radius
+
+
+def verify_kmedian_solution(graph, selected_facilities, k, reported_cost, tolerance=1e-6):
+    """
+    Verify a k-median solution independently.
+    """
+    verify_selected_facilities(selected_facilities, k)
+
+    recomputed_cost = recompute_kmedian_cost(graph, selected_facilities)
+    difference = abs(recomputed_cost - reported_cost)
+
+    print("=== K-MEDIAN VERIFICATION ===")
+    print("Selected facilities:", selected_facilities)
+    print("Facility count:", len(selected_facilities))
+    print("Unique facility count:", len(set(selected_facilities)))
+    print("Reported cost:", reported_cost)
+    print("Recomputed cost:", recomputed_cost)
+    print("Difference:", difference)
+
+    if difference > tolerance:
+        raise ValueError(
+            f"k-median verification failed: reported={reported_cost}, "
+            f"recomputed={recomputed_cost}, diff={difference}"
+        )
+
+    print("Verification passed.")
+    return recomputed_cost
+
+
+def verify_kcenter_solution(graph, selected_facilities, k, reported_radius, tolerance=1e-6):
+    """
+    Verify a k-center solution independently.
+    """
+    verify_selected_facilities(selected_facilities, k)
+
+    recomputed_radius = recompute_kcenter_radius(graph, selected_facilities)
+    difference = abs(recomputed_radius - reported_radius)
+
+    print("=== K-CENTER VERIFICATION ===")
+    print("Selected facilities:", selected_facilities)
+    print("Facility count:", len(selected_facilities))
+    print("Unique facility count:", len(set(selected_facilities)))
+    print("Reported radius:", reported_radius)
+    print("Recomputed radius:", recomputed_radius)
+    print("Difference:", difference)
+
+    if difference > tolerance:
+        raise ValueError(
+            f"k-center verification failed: reported={reported_radius}, "
+            f"recomputed={recomputed_radius}, diff={difference}"
+        )
+
+    print("Verification passed.")
+    return recomputed_radius

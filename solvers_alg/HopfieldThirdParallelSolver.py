@@ -7,9 +7,9 @@ from solvers.brute_solver import calculate_distance
 from solvers_alg.KMPSolver import KMPSolver
 
 
-class HopfieldParallelSolver(KMPSolver):
+class HopfieldThirdParallelSolver(KMPSolver):
     def __init__(self, use_gpu, seed=None):
-        self._name = "Hopfield Parallel Solver"
+        self._name = "Hopfield Third Parallel Solver"
         self._solutionValue = None
         self._selectedFacilities = []
 
@@ -49,8 +49,31 @@ class HopfieldParallelSolver(KMPSolver):
         self._math_row_indices = None
         self._k_indices = None
 
+        self._alpha = 0.25
+        self._beta = 2.0
+        self._gamma = 0.1
+        self._max_iterations = 1000
+
     def set_seed(self, seed: int):
         self._rng = random.Random(seed)
+
+    def getName(self):
+        return self._name
+    
+    def getSolutionValue(self):
+        return self._solutionValue
+    
+    def getSelectedFacilities(self):
+        return self._selectedFacilities
+    
+    def setN(self, n):
+        self._n = n
+
+    def setK(self, k):
+        self._k = k
+
+    def setGraph(self, graph):
+        self._graph = graph
 
     def initialize(self, problem:KMProblem):
         self._n = problem.getN()
@@ -61,9 +84,9 @@ class HopfieldParallelSolver(KMPSolver):
 
         # Initialize distance values
         if self._use_gpu:
-            self._distance_values = 1 - self._graph._gpu_normalized_distances
+            self._distance_values = self._graph._gpu_normalized_distances
         else:
-            self._distance_values = (1 - self._graph._normalized_distances).clone().detach()
+            self._distance_values = self._graph._normalized_distances.clone().detach()
 
         if self._distance_values.ndim != 2:
             raise ValueError(
@@ -101,38 +124,19 @@ class HopfieldParallelSolver(KMPSolver):
         self._facility_activation_values = torch.zeros(size=self._size, dtype=torch.int, device=self._device)
         self._client_activation_values = torch.zeros(size=self._size, dtype=torch.int, device=self._device)
 
-    def getName(self):
-        return self._name
-    
-    def getSolutionValue(self):
-        return self._solutionValue
-    
-    def getSelectedFacilities(self):
-        return self._selectedFacilities
-    
-    def setN(self, n):
-        self._n = n
-
-    def setK(self, k):
-        self._k = k
-
-    def setGraph(self, graph):
-        self._graph = graph
-
     def solve(self, runNum=None, starter_facilities=None):
-        best_facilities = starter_facilities
-        best_distance = calculate_distance(self._graph, best_facilities, self._n) if starter_facilities else None
-
         self._initialize_per_run_arrays(starter_facilities)
 
+        current_facilities, current_distance = self._calculate_facilities_and_distance()
+        best_facilities = list(current_facilities)
+        best_distance = current_distance
         iterations = 0
 
-        # Evaluate initial solution
-        stabilized = False
-
-        while not stabilized:
+        while iterations < self._max_iterations:
             prev_C = self._client_activation_values.clone()
             prev_F = self._facility_activation_values.clone()
+            prev_active_facility_list = list(self._active_facility_list)
+            prev_distance = current_distance
 
             # Client updates
             self._calculate_client_values()
@@ -142,7 +146,6 @@ class HopfieldParallelSolver(KMPSolver):
             self._calculate_facility_values()
             self._update_facility()
 
-            # Fixed-point condition
             stabilized = (
                 torch.equal(prev_C, self._client_activation_values) and
                 torch.equal(prev_F, self._facility_activation_values)
@@ -150,12 +153,39 @@ class HopfieldParallelSolver(KMPSolver):
             iterations += 1
 
             tmp_selected_facilities, tmp_solution_value = self._calculate_facilities_and_distance()
-            print("Iteration", iterations, "distance:", tmp_solution_value)
 
-        print(f"Converged in {iterations} iterations.")
-        self._selectedFacilities, self._solutionValue = self._calculate_facilities_and_distance()
-        print(f"Distance: {self._solutionValue}")
+            if tmp_solution_value >= prev_distance:
+                self._client_activation_values = prev_C
+                self._facility_activation_values = prev_F
+                self._active_facility_list = prev_active_facility_list
+                self._selectedFacilities = list(best_facilities)
+                self._solutionValue = best_distance
+                print(
+                    f"Rejected iteration {iterations} because distance did not improve "
+                    f"({tmp_solution_value} >= {prev_distance})."
+                )
+                print(f"Best distance: {self._solutionValue}")
+                return
 
+            current_facilities = list(tmp_selected_facilities)
+            current_distance = tmp_solution_value
+            print("Iteration", iterations, "distance:", current_distance)
+
+            if current_distance < best_distance:
+                best_facilities = list(current_facilities)
+                best_distance = current_distance
+
+            if stabilized:
+                break
+
+        if iterations >= self._max_iterations:
+            print(f"Stopped after reaching max iterations ({self._max_iterations}).")
+        else:
+            print(f"Converged in {iterations} iterations.")
+
+        self._selectedFacilities = list(best_facilities)
+        self._solutionValue = best_distance
+        print(f"Best distance: {self._solutionValue}")
 
     def _initialize_per_run_arrays(self, starter_facilities):
         self._client_activation_values = torch.zeros(self._size, dtype=torch.int, device=self._device)
@@ -186,118 +216,101 @@ class HopfieldParallelSolver(KMPSolver):
         tmp_selected_facilities, tmp_solution_value = self._calculate_facilities_and_distance()
         print("Initial distance:", tmp_solution_value)
 
+    def _compute_dciq_and_Dminusq(self):
+        d_ci_q = self._distance_values[:, self._active_facility_list]   # (n, k)
 
+        D_minus_q = torch.empty(
+            (self._matrix_n, self._k),
+            dtype=self._distance_values.dtype,
+            device=self._device
+        )
 
-    # Greedy BUILD initializer
-    def _warm_start_facilities_greedy_deterministic(self) -> list[int]:
-        # Work on CPU for simple deterministic indexing and masking.
-        D = self._distance_values.detach().to("cpu")
-        num_candidates = D.shape[1]
+        for q in range(self._k):
+            other_centers = [self._active_facility_list[r] for r in range(self._k) if r != q]
 
-        # D stores similarity (1 - normalized distance), so we maximize totals.
-        # First facility: argmax_f sum_i D[i, f]
-        col_sums = D.sum(dim=0)
-        first_facility = torch.argmax(col_sums).item()
+            if len(other_centers) == 0:
+                D_minus_q[:, q] = float("inf")
+            else:
+                D_minus_q[:, q] = torch.min(
+                    self._distance_values[:, other_centers],
+                    dim=1
+                ).values
 
-        selected = [first_facility]
-        selected_mask = torch.zeros(num_candidates, dtype=torch.bool)
-        selected_mask[first_facility] = True
-
-        # Maintain max similarity to selected set for each client i.
-        current_max_sim = D[:, first_facility].clone()
-
-        for _ in range(1, self._k):
-            # For each candidate f, compute sum_i max(current_max_sim[i], D[i, f]).
-            candidate_scores = torch.maximum(current_max_sim.unsqueeze(1), D).sum(dim=0)
-            candidate_scores[selected_mask] = float("-inf")
-
-            next_facility = torch.argmax(candidate_scores).item()
-            selected.append(next_facility)
-            selected_mask[next_facility] = True
-
-            # Update maintained maximum similarities.
-            current_max_sim = torch.maximum(current_max_sim, D[:, next_facility])
-
-        return selected
-
-    # Optional random first greedy initializer (currently not used).
-    def _warm_start_facilities_greedy_random_first(self) -> list[int]:
-        D = self._distance_values.detach().to("cpu")
-        num_candidates = D.shape[1]
-
-        # First facility: random, controlled by solver-local RNG.
-        first_facility = self._rng.randrange(num_candidates)
-
-        selected = [first_facility]
-        selected_mask = torch.zeros(num_candidates, dtype=torch.bool)
-        selected_mask[first_facility] = True
-
-        # Maintain max similarity to selected set for each client i.
-        current_max_sim = D[:, first_facility].clone()
-
-        for _ in range(1, self._k):
-            # For each candidate f, compute sum_i max(current_max_sim[i], D[i, f]).
-            candidate_scores = torch.maximum(current_max_sim.unsqueeze(1), D).sum(dim=0)
-            candidate_scores[selected_mask] = float("-inf")
-
-            next_facility = torch.argmax(candidate_scores).item()
-            selected.append(next_facility)
-            selected_mask[next_facility] = True
-
-            # Update maintained maximum similarities.
-            current_max_sim = torch.maximum(current_max_sim, D[:, next_facility])
-
-        return selected
-
+        return d_ci_q, D_minus_q
+    
     def _calculate_client_values(self):
-        self._client_inner_values[:,:] = self._distance_values[:,self._active_facility_list]
+        d_ci_q, D_minus_q = self._compute_dciq_and_Dminusq()
+
+        cond = D_minus_q > (1.0 + self._alpha) * d_ci_q
+
+        self._client_inner_values = torch.where(
+            cond,
+            (1.0 - self._alpha) * d_ci_q,
+            2.0 * d_ci_q - D_minus_q
+        )
 
     def _update_client(self):
         self._client_activation_values = torch.zeros(size=self._size, dtype=torch.int, device=self._device)
         # Find the maximum value in each row of client_inner_values and set corresponding activation to 1
-        max_indices = torch.argmax(self._client_inner_values, dim=1)
+        max_indices = torch.argmin(self._client_inner_values, dim=1)
         self._client_activation_values[self._math_row_indices, max_indices] = 1
 
-    def _calculate_facility_values(self):
-        C = self._client_activation_values.to(self._distance_values.dtype)    # (n,k)
-        self._facility_inner_values = self._distance_values.t() @ C           # (n,n)^T @ (n,k) -> (n,k)
-
-        # """
-        # PF[j, q] = sum_{i assigned to cluster q} D[i, j]
-        # """
-        # D = self._distance_values  # (n, n)
-
-        # # (n, k) float or same dtype as D
-        # C = self._client_activation_values.to(D.dtype)
-
-        # self._facility_inner_values = torch.zeros(
-        #     (self._n, self._k), dtype=D.dtype, device=self._device
-        # )
-
-        # for q in range(self._k):
-        #     # Find clients assigned to cluster q
-        #     assigned_mask = C[:, q] > 0  # (n,) bool
-
-        #     if torch.any(assigned_mask):
-        #         # Sum distances from those clients to every candidate center j
-        #         # D[assigned_mask, :] has shape (#assigned, n)
-        #         self._facility_inner_values[:, q] = D[assigned_mask, :].sum(dim=0)
-        #     else:
-        #         # Edge case: no clients assigned to this cluster.
-        #         # You can choose what you want here; this keeps costs at 0.
-        #         self._facility_inner_values[:, q] = 0.0
-
     def _update_facility(self):
-        self._facility_activation_values = torch.zeros(size=self._size, dtype=torch.int, device=self._device)
+        self._facility_activation_values = torch.zeros(
+        size=self._size, dtype=torch.int, device=self._device
+        )
+
         chosen = []
+        used_mask = torch.zeros(self._matrix_n, dtype=torch.bool, device=self._device)
 
         for q in range(self._k):
-            costs = self._facility_inner_values[:, q]  # (n,)
-            j = torch.argmax(costs).item()
+            costs = self._facility_inner_values[:, q].clone()
+
+            # Prevent already chosen facilities from being selected again
+            costs[used_mask] = float("inf")
+
+            j = torch.argmin(costs).item()
+
             chosen.append(j)
+            used_mask[j] = True
             self._facility_activation_values[j, q] = 1
 
         self._active_facility_list = chosen
+
+    def _calculate_facility_values(self):
+        _, D_minus_q = self._compute_dciq_and_Dminusq()
+        D = self._distance_values  # shape (n, n), D[i, j] = d_ij
+
+        self._facility_inner_values = torch.empty(
+            (self._matrix_n, self._k),
+            dtype=D.dtype,
+            device=self._device
+        )
+
+        for q in range(self._k):
+            # base_matrix[i, j] = min(d_ij, D_i^{-q})
+            base_matrix = torch.minimum(
+                D,
+                D_minus_q[:, q].unsqueeze(1)
+            )  # shape (n, n)
+
+            # base_sum[j] = sum_i min(d_ij, D_i^{-q})
+            base_sum = base_matrix.sum(dim=0)  # shape (n,)
+
+            # penalty must be indexed by candidate facility j
+            D_minus_q_at_candidate = D_minus_q[:, q]  # this contains D_i^{-q} for all nodes i
+            # when interpreted as candidates, index j refers to the candidate node j
+
+            threshold = self._beta * (self._matrix_n / self._k) * base_sum
+
+            delta = torch.where(
+                D_minus_q_at_candidate > threshold,
+                torch.zeros_like(base_sum),
+                self._gamma * D_minus_q_at_candidate
+            )
+
+            # pf_jq for all candidate facilities j
+            self._facility_inner_values[:, q] = base_sum + delta
 
     def _calculate_facilities_and_distance(self):
         selected_facilities = list(self._active_facility_list)

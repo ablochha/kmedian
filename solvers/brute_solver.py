@@ -90,6 +90,37 @@ def calculate_distance(graph, facilities, n=None):
     # sum up the distances to get the total distance
     return float(torch.sum(min_values))
 
+
+def calculate_capacitated_distance(graph, client_activation_values, active_facility_list):
+    """
+    Compute capacitated k-median cost using the actual client-to-cluster assignment.
+
+    Assumes:
+    - `client_activation_values` has shape (n_clients, k_clusters)
+    - `active_facility_list[q]` is the facility serving cluster q
+    - distance layout is `graph._distances[facility, client]`
+    """
+
+    n, k = client_activation_values.shape
+    if len(active_facility_list) != k:
+        raise ValueError(
+            f"active_facility_list length ({len(active_facility_list)}) must match k ({k})."
+        )
+
+    total_distance = 0.0
+    for i in range(n):
+        assigned_clusters = torch.nonzero(client_activation_values[i], as_tuple=False).flatten()
+        if assigned_clusters.numel() != 1:
+            raise ValueError(
+                f"Client {i} must be assigned to exactly one cluster, found {assigned_clusters.numel()}."
+            )
+
+        q = int(assigned_clusters.item())
+        facility = active_facility_list[q]
+        total_distance += float(graph._distances[facility, i])
+
+    return total_distance
+
 def calculate_radius(graph, facilities):
     """
     Compute the k-center radius given a set of facilities.
@@ -108,6 +139,8 @@ def calculate_radius(graph, facilities):
     radius = torch.max(min_distances)
 
     return float(radius)
+
+
 
 
 

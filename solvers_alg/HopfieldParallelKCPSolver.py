@@ -116,6 +116,7 @@ class HopfieldParallelKCPSolver(KCPSolver):
         self._initialize_per_run_arrays(starter_facilities)
 
         stabilized = False
+        iterations = 0
 
         while not stabilized:
             prev_C = self._client_activation_values.clone()
@@ -135,6 +136,9 @@ class HopfieldParallelKCPSolver(KCPSolver):
                 torch.equal(prev_F, self._facility_activation_values)
             )
 
+            iterations += 1
+
+        print(f"Stabilized after {iterations} iterations.")
         self._selectedFacilities, self._solutionValue = self._calculate_facilities_and_distance()
 
     def _initialize_per_run_arrays(self, starter_facilities):
@@ -234,6 +238,7 @@ class HopfieldParallelKCPSolver(KCPSolver):
     def _update_facility(self):
 
         self._facility_activation_values = torch.zeros(size=self._size, dtype=torch.int, device=self._device)
+        self._facilities = torch.zeros(size=(1, self._num_rows), dtype=torch.int, device=self._device)
 
         chosen = torch.zeros(self._n, dtype=torch.bool, device=self._device)
 

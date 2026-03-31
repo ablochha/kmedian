@@ -3,7 +3,7 @@ import random
 import torch
 
 from problems.CKMProblem import CKMProblem
-from solvers.brute_solver import calculate_distance
+from solvers.brute_solver import calculate_capacitated_distance
 from solvers_alg.CKMPSolver import CKMPSolver
 
 
@@ -97,7 +97,7 @@ class HopfieldParallelCKMSolver(CKMPSolver):
 
     def solve(self, runNum=None, starter_facilities=None):
         best_facilities = starter_facilities
-        best_distance = calculate_distance(self._graph, best_facilities, self._n) if starter_facilities else None
+        best_distance = calculate_capacitated_distance(self._graph, best_facilities, self._n) if starter_facilities else None
 
         self._initialize_per_run_arrays(starter_facilities)
 
@@ -200,5 +200,7 @@ class HopfieldParallelCKMSolver(CKMPSolver):
 
     def _calculate_facilities_and_distance(self):
         selected_facilities = list(self._active_facility_list)
-        selected_distance = calculate_distance(self._graph, selected_facilities, self._n)
+        selected_distance = calculate_capacitated_distance(self._graph, self._client_activation_values, self._active_facility_list,)
+        # print("Length:", len(self._active_facility_list), "Distance:", selected_distance)
+        # print("Selected facilities:", selected_facilities)
         return selected_facilities, selected_distance

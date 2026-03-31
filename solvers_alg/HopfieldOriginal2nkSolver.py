@@ -133,11 +133,13 @@ class HopfieldOriginalSolver(KMPSolver):
         # Initialize our per run variables.
         self._initialize_per_run_arrays()
         facility_stabilized = False
+
+        iterations = 0
         
         while not facility_stabilized:
             
             max_values, max_indices = torch.max(self._facility_inner_values, dim=1)
-            sumBefore = torch.sum(max_values).item()                
+            sumBefore = torch.sum(max_values).item()
         
             # Determine which of the facilities has the lowest inner value and deactivate it
             #self._sorted_facility_inner_values, self._sorted_facility_indices = torch.sort(max_values)
@@ -205,6 +207,8 @@ class HopfieldOriginalSolver(KMPSolver):
                 self._facilities[0,bestFacility] = 0
                 self._facilities[0,worstFacility] = 1
                 self._active_facility_list[max_indices[worstFacility]] = worstFacility.item()
+
+            iterations += 1
                 
         #selected_facilities, selected_distance = self._calculate_facilities_and_distance()
 
@@ -223,7 +227,9 @@ class HopfieldOriginalSolver(KMPSolver):
     #return best_facilities
     #current_time = time.time()
     #print("Energy: ",max(sumBefore,sumAfter)," Time: ",current_time - start_time)
+        print(f"Converged in {iterations} iterations.")
         self._selectedFacilities, self._solutionValue = self._calculate_facilities_and_distance()
+        print(f"Distance: {self._solutionValue}")
 
     def _initialize_per_run_arrays(self):
     
@@ -234,7 +240,14 @@ class HopfieldOriginalSolver(KMPSolver):
         
         # randomly pick k vertices as the starting facilities
         index = 0
-        for value in random.sample([i for i in range(0, self._n)], k=self._k):
+        # for value in random.sample([i for i in range(0, self._n)], k=self._k):
+        #     self._facility_activation_values[value, index] = 1
+        #     self._facilities[0,value] = 1
+        #     self._active_facility_list.append(value)
+        #     index = index + 1
+
+        initial_facilities = self._warm_start_facilities_greedy_deterministic()
+        for value in initial_facilities:
             self._facility_activation_values[value, index] = 1
             self._facilities[0,value] = 1
             self._active_facility_list.append(value)
@@ -273,6 +286,8 @@ class HopfieldOriginalSolver(KMPSolver):
             print(self._facility_inner_values)
             print()
         """
+        tmp_selected_facilities, tmp_solution_value = self._calculate_facilities_and_distance()
+        print("Initial distance:", tmp_solution_value)
 
     def _calculate_facilities_and_distance(self):
     
@@ -306,3 +321,36 @@ class HopfieldOriginalSolver(KMPSolver):
         self._client_activation_values = torch.zeros(size=self._size, dtype=torch.int, device=self._device)
         max_indices = torch.argmax(self._client_inner_values, dim=1)
         self._client_activation_values[self._math_row_indices,max_indices] = 1
+
+    # For experiments
+    # Greedy BUILD initializer currently being used
+    def _warm_start_facilities_greedy_deterministic(self) -> list[int]:
+        # Work on CPU for simple deterministic indexing and masking.
+        D = self._distance_values.detach().to("cpu")
+        num_candidates = D.shape[1]
+
+        # D stores similarity (1 - normalized distance), so we maximize totals.
+        # First facility: argmax_f sum_i D[i, f]
+        col_sums = D.sum(dim=0)
+        first_facility = torch.argmax(col_sums).item()
+
+        selected = [first_facility]
+        selected_mask = torch.zeros(num_candidates, dtype=torch.bool)
+        selected_mask[first_facility] = True
+
+        # Maintain max similarity to selected set for each client i.
+        current_max_sim = D[:, first_facility].clone()
+
+        for _ in range(1, self._k):
+            # For each candidate f, compute sum_i max(current_max_sim[i], D[i, f]).
+            candidate_scores = torch.maximum(current_max_sim.unsqueeze(1), D).sum(dim=0)
+            candidate_scores[selected_mask] = float("-inf")
+
+            next_facility = torch.argmax(candidate_scores).item()
+            selected.append(next_facility)
+            selected_mask[next_facility] = True
+
+            # Update maintained maximum similarities.
+            current_max_sim = torch.maximum(current_max_sim, D[:, next_facility])
+
+        return selected

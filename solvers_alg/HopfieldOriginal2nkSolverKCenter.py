@@ -133,6 +133,8 @@ class HopfieldOriginal2nkSolverKCenter(KCPSolver):
         # Initialize our per run variables.
         self._initialize_per_run_arrays()
         facility_stabilized = False
+
+        iterations = 0
         
         while not facility_stabilized:
             
@@ -203,6 +205,8 @@ class HopfieldOriginal2nkSolverKCenter(KCPSolver):
                 self._facilities[0,bestFacility] = 0
                 self._facilities[0,worstFacility] = 1
                 self._active_facility_list[max_indices[worstFacility]] = worstFacility.item()
+
+            iterations += 1
                 
         #selected_facilities, selected_distance = self._calculate_facilities_and_distance()
 
@@ -221,6 +225,7 @@ class HopfieldOriginal2nkSolverKCenter(KCPSolver):
     #return best_facilities
     #current_time = time.time()
     #print("Energy: ",max(sumBefore,sumAfter)," Time: ",current_time - start_time)
+        print(f"Stabilized after {iterations} iterations.")
         self._selectedFacilities, self._solutionValue = self._calculate_facilities_and_distance()
 
     def _initialize_per_run_arrays(self):

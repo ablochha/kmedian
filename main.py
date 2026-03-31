@@ -12,6 +12,13 @@ from solvers_alg.AryaMultiSolver import AryaMultiSolver
 from solvers_alg.CohenAddadMultiSolver import CohenAddadMultiSolver
 from solvers_alg.CohenAddadSolver import CohenAddadSolver
 from solvers_alg.DominguezAlgorithmSolver import DominguezAlgorithmSolver
+from solvers_alg.DropWorstFacilityKCenterSolver import \
+    DropWorstFacilityKCenterSolver
+from solvers_alg.FarthestClientReassignmentKCenterSolver import \
+    FarthestClientReassignmentKCenterSolver
+from solvers_alg.FarthestFirstKCenterSolver import FarthestFirstKCenterSolver
+from solvers_alg.GreedyAddRemoveKCenterSolver import \
+    GreedyAddRemoveKCenterSolver
 from solvers_alg.HaralampievAlgorithmSolver import HaralampievAlgorithmSolver
 from solvers_alg.HopfieldAlgorithmSolver import HopfieldAlgorithmSolver
 from solvers_alg.HopfieldBestHalfMultiAlgorithmSolver import \
@@ -30,9 +37,15 @@ from solvers_alg.HopfieldOriginal2nkSolverKCenter import \
 from solvers_alg.HopfieldParallelCKMSolver import HopfieldParallelCKMSolver
 from solvers_alg.HopfieldParallelKCPSolver import HopfieldParallelKCPSolver
 from solvers_alg.HopfieldParallelSolver import HopfieldParallelSolver
+from solvers_alg.HopfieldSecondParallelSolver import \
+    HopfieldSecondParallelSolver
+from solvers_alg.HopfieldThirdParallelSolver import HopfieldThirdParallelSolver
 from solvers_alg.InterchangeAlgorithmSolver import InterchangeAlgorithmSolver
+from solvers_alg.LocalRecenterKCenterSolver import LocalRecenterKCenterSolver
 from solvers_alg.LocalSearchSolver import LocalSearchSolver
 from solvers_alg.LocalSearchSolverKCenter import LocalSearchSolverKCenter
+from solvers_alg.PAMSolver import PAMSolver
+from solvers_alg.RandomizedSwapKCenterSolver import RandomizedSwapKCenterSolver
 from solvers_alg.ZhuAlgorithmSolver import ZhuAlgorithmSolver
 from utils.user_input import get_input_arguments
 
@@ -322,16 +335,43 @@ if __name__ == '__main__':
                 case "15":
                     solver = HopfieldParallelSolver(use_gpu=args["use_gpu"], seed=99)
 
+                case "16":
+                    solver = PAMSolver(use_gpu=args["use_gpu"])
+
+                case "17":
+                    solver = HopfieldSecondParallelSolver(use_gpu=args["use_gpu"], seed=99)
+
+                case "18":
+                    solver = HopfieldThirdParallelSolver(use_gpu=args["use_gpu"], seed=99)
+
         case "2":
             match args['algorithm']:
                 case "1":
                     solver = HopfieldOriginal2nkSolverKCenter(use_gpu=args["use_gpu"])
 
                 case "2":
-                    solver = LocalSearchSolverKCenter(max_time=args["parameters"]["max_time"])
+                    solver = LocalSearchSolverKCenter(run_time=args["parameters"]["runs"])
 
                 case "3":
                     solver = HopfieldParallelKCPSolver(use_gpu=args["use_gpu"])
+
+                case "4":
+                    solver = FarthestFirstKCenterSolver(run_time=args["parameters"]["runs"])
+
+                case "5":
+                    solver = FarthestClientReassignmentKCenterSolver()
+
+                case "6":
+                    solver = GreedyAddRemoveKCenterSolver()
+
+                case "7":
+                    solver = DropWorstFacilityKCenterSolver()
+
+                case "8":
+                    solver = LocalRecenterKCenterSolver()
+
+                case "9":
+                    solver = RandomizedSwapKCenterSolver()
 
         case "3":
             match args['algorithm']:
@@ -360,5 +400,5 @@ if __name__ == '__main__':
 
     problems = load_problems(dataset_path, dataset_key, args["use_gpu"], problem_family)
 
-    manager = ExperimentManager(problems, solver, problem_family, args.get("runs", None))
+    manager = ExperimentManager(problems, solver, problem_family, args["parameters"]["runs"])
     manager.run(dataset_key)
