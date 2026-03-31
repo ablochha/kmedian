@@ -135,7 +135,6 @@ class HopfieldSecondParallelSolver(KMPSolver):
         
         iterations = 0
         
-        # --- NEW: Patience & Cycle Detection Setup ---
         patience_counter = 0
         max_patience = 3  # Allow the network to explore 3 worse states before giving up
         visited_states = set()
@@ -147,10 +146,6 @@ class HopfieldSecondParallelSolver(KMPSolver):
                 print(f"Cycle detected at iteration {iterations}. Stopping to prevent infinite loop.")
                 break
             visited_states.add(current_state_signature)
-
-            # (You no longer need to strictly save prev_C, prev_F, etc. here 
-            #  because we are reverting to the absolute BEST state at the end, 
-            #  not just the immediately previous state).
 
             min_values_before = torch.min(self._facility_inner_values, dim=1).values
             sum_before = torch.sum(min_values_before).item()
@@ -175,14 +170,12 @@ class HopfieldSecondParallelSolver(KMPSolver):
 
             print(f"Iteration {iterations} | Energy: {sum_after:.2f} | Real Distance: {current_distance:.2f}")
 
-            # --- NEW: Check for actual real-world improvement ---
             if current_distance < best_distance:
                 best_facilities = list(current_facilities)
                 best_distance = current_distance
                 patience_counter = 0  # Reset patience because we found a new global best!
                 print(f"  -> New best distance found: {best_distance}")
 
-            # --- NEW: Patience Logic ---
             if sum_after >= sum_before:
                 patience_counter += 1
                 if patience_counter > max_patience:
