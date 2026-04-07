@@ -333,7 +333,7 @@ if __name__ == '__main__':
                     solver = DominguezAlgorithmSolver(use_gpu=args["use_gpu"])
 
                 case "15":
-                    solver = HopfieldParallelSolver(use_gpu=args["use_gpu"], seed=99)
+                    solver = HopfieldParallelSolver(use_gpu=args["use_gpu"], seed=13)
 
                 case "16":
                     solver = PAMSolver(use_gpu=args["use_gpu"])

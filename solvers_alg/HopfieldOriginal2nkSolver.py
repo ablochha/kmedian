@@ -240,18 +240,18 @@ class HopfieldOriginalSolver(KMPSolver):
         
         # randomly pick k vertices as the starting facilities
         index = 0
-        # for value in random.sample([i for i in range(0, self._n)], k=self._k):
-        #     self._facility_activation_values[value, index] = 1
-        #     self._facilities[0,value] = 1
-        #     self._active_facility_list.append(value)
-        #     index = index + 1
-
-        initial_facilities = self._warm_start_facilities_greedy_deterministic()
-        for value in initial_facilities:
+        for value in random.sample([i for i in range(0, self._n)], k=self._k):
             self._facility_activation_values[value, index] = 1
             self._facilities[0,value] = 1
             self._active_facility_list.append(value)
             index = index + 1
+
+        # initial_facilities = self._warm_start_facilities_greedy_deterministic()
+        # for value in initial_facilities:
+        #     self._facility_activation_values[value, index] = 1
+        #     self._facilities[0,value] = 1
+        #     self._active_facility_list.append(value)
+        #     index = index + 1
         
         """
         if self.verbose is True:

@@ -78,12 +78,10 @@ class PAMSolver(KMPSolver):
         self._graph = graph
 
     def solve(self, runNum=None):
-        self._selectedFacilities = self._warm_start_facilities_greedy_deterministic()
-        self._solutionValue = calculate_distance(
-            self._graph,
-            self._selectedFacilities,
-            self._n,
-        )
+        medoids = self._warm_start_facilities_greedy_deterministic()
+        medoids, cost = self._pam_swap(medoids)
+        self._selectedFacilities = medoids
+        self._solutionValue = cost
 
     # Greedy BUILD initializer
     def _warm_start_facilities_greedy_deterministic(self) -> list[int]:
@@ -116,3 +114,32 @@ class PAMSolver(KMPSolver):
             current_max_sim = torch.maximum(current_max_sim, D[:, next_facility])
 
         return selected
+    
+    def _pam_swap(self, medoids):
+        current_cost = calculate_distance(self._graph, medoids, self._n)
+
+        while True:
+            best_cost = current_cost
+            best_swap = None
+
+            medoid_set = set(medoids)
+            non_medoids = [i for i in range(self._n) if i not in medoid_set]
+
+            for m in medoids:
+                for o in non_medoids:
+                    candidate = medoids.copy()
+                    candidate[candidate.index(m)] = o
+
+                    cost = calculate_distance(self._graph, candidate, self._n)
+                    if cost < best_cost:
+                        best_cost = cost
+                        best_swap = (m, o)
+
+            if best_swap is None:
+                break
+
+            m, o = best_swap
+            medoids[medoids.index(m)] = o
+            current_cost = best_cost
+
+        return medoids, current_cost

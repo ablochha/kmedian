@@ -49,9 +49,9 @@ class HopfieldThirdParallelSolver(KMPSolver):
         self._math_row_indices = None
         self._k_indices = None
 
-        self._alpha = 0.25
-        self._beta = 2.0
-        self._gamma = 0.1
+        self._alpha = 0
+        self._beta = 1.0
+        self._gamma = 0
         self._max_iterations = 1000
 
     def set_seed(self, seed: int):
