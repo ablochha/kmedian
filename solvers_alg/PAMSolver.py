@@ -1,4 +1,5 @@
 import torch
+import math
 
 from problems.KMProblem import KMProblem
 from solvers.brute_solver import calculate_distance
@@ -77,9 +78,12 @@ class PAMSolver(KMPSolver):
     def setGraph(self, graph):
         self._graph = graph
 
-    def solve(self, runNum=None):
+    def solve(self, runNum=None, use_fastpam1=True):
         medoids = self._warm_start_facilities_greedy_deterministic()
-        medoids, cost = self._pam_swap(medoids)
+        if use_fastpam1:
+            medoids, cost = self._pam_swap_fastpam1(medoids)
+        else:
+            medoids, cost = self._pam_swap(medoids)
         self._selectedFacilities = medoids
         self._solutionValue = cost
 
@@ -115,6 +119,72 @@ class PAMSolver(KMPSolver):
 
         return selected
     
+    def _get_original_distance_matrix_cpu(self):
+        if self._use_gpu and hasattr(self._graph, "_gpu_distances"):
+            return self._graph._gpu_distances.detach().to("cpu", dtype=torch.float64)
+        return self._graph._distances.detach().to("cpu", dtype=torch.float64)
+
+    def _compute_nearest_and_second_nearest(self, medoids):
+        D = self._get_original_distance_matrix_cpu()
+        medoid_tensor = torch.tensor(medoids, dtype=torch.long, device=D.device)
+        medoid_distances = D[:, medoid_tensor]  # (n, k)
+
+        nearest_vals, nearest_pos = torch.min(medoid_distances, dim=1)
+
+        second_vals = torch.full_like(nearest_vals, float("inf"), dtype=D.dtype)
+        if len(medoids) > 1:
+            temp = medoid_distances.clone()
+            row_idx = torch.arange(self._n, device=D.device)
+            temp[row_idx, nearest_pos] = float("inf")
+            second_vals = torch.min(temp, dim=1).values
+
+        nearest_medoids = medoid_tensor[nearest_pos]
+        return D, nearest_vals, second_vals, nearest_medoids
+
+    def _fastpam1_best_swap(self, medoids, current_cost):
+        D, nearest_vals, second_vals, nearest_medoids = self._compute_nearest_and_second_nearest(medoids)
+
+        best_delta = 0.0
+        best_swap = None
+
+        medoid_to_pos = {m: idx for idx, m in enumerate(medoids)}
+        medoid_set = set(medoids)
+        non_medoids = [i for i in range(self._n) if i not in medoid_set]
+
+        for o in non_medoids:
+            d_to_o = D[:, o]
+            delta_by_pos = torch.zeros(len(medoids), dtype=D.dtype, device=D.device)
+
+            for i in range(self._n):
+                current_nearest = nearest_vals[i].item()
+                current_second = second_vals[i].item()
+                nearest_medoid = int(nearest_medoids[i].item())
+                d_io = d_to_o[i].item()
+
+                if d_io < current_nearest:
+                    common_delta = d_io - current_nearest
+                    delta_by_pos += common_delta
+
+                    nearest_pos = medoid_to_pos[nearest_medoid]
+                    delta_by_pos[nearest_pos] += min(d_io, current_second) - d_io
+                else:
+                    nearest_pos = medoid_to_pos[nearest_medoid]
+                    delta_by_pos[nearest_pos] += min(d_io, current_second) - current_nearest
+
+            candidate_pos = torch.argmin(delta_by_pos).item()
+            candidate_delta = delta_by_pos[candidate_pos].item()
+
+            if candidate_delta < best_delta:
+                best_delta = candidate_delta
+                best_swap = (medoids[candidate_pos], o)
+
+        if best_swap is None:
+            return None, current_cost
+
+        m, o = best_swap
+        new_cost = current_cost + best_delta
+        return best_swap, new_cost
+    
     def _pam_swap(self, medoids):
         current_cost = calculate_distance(self._graph, medoids, self._n)
 
@@ -141,5 +211,26 @@ class PAMSolver(KMPSolver):
             m, o = best_swap
             medoids[medoids.index(m)] = o
             current_cost = best_cost
+
+        return medoids, current_cost
+
+    def _pam_swap_fastpam1(self, medoids):
+        medoids = medoids.copy()
+        current_cost = calculate_distance(self._graph, medoids, self._n)
+
+        while True:
+            best_swap, estimated_cost = self._fastpam1_best_swap(medoids, current_cost)
+            if best_swap is None:
+                break
+
+            m, o = best_swap
+            medoids[medoids.index(m)] = o
+
+            # Recompute exact cost after applying the swap for safety.
+            current_cost = calculate_distance(self._graph, medoids, self._n)
+
+            # Numerical guard: if estimated cost and exact cost differ slightly, trust exact cost.
+            if not math.isclose(current_cost, estimated_cost, rel_tol=1e-9, abs_tol=1e-9):
+                current_cost = calculate_distance(self._graph, medoids, self._n)
 
         return medoids, current_cost

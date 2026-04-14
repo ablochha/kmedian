@@ -6,6 +6,8 @@ from reader.CKMPJSONCoordinateReader import CKMPJSONCoordinateReader
 from reader.CKMPJSONDistanceReader import CKMPJSONDistanceReader
 from reader.KCPJSONCoordinateReader import KCPJSONCoordinateReader
 from reader.KCPJSONDistanceReader import KCPJSONDistanceReader
+from reader.KFJSONCoordinateReader import KFJSONCoordinateReader
+from reader.KFJSONDistanceReader import KFJSONDistanceReader
 from reader.KMPJSONCoordinateReader import KMPJSONCoordinateReader
 from reader.KMPJSONDistanceReader import KMPJSONDistanceReader
 from solvers_alg.AryaMultiSolver import AryaMultiSolver
@@ -36,6 +38,7 @@ from solvers_alg.HopfieldOriginal2nkSolverKCenter import \
     HopfieldOriginal2nkSolverKCenter
 from solvers_alg.HopfieldParallelCKMSolver import HopfieldParallelCKMSolver
 from solvers_alg.HopfieldParallelKCPSolver import HopfieldParallelKCPSolver
+from solvers_alg.HopfieldParallelKFSolver import HopfieldParallelKFSolver
 from solvers_alg.HopfieldParallelSolver import HopfieldParallelSolver
 from solvers_alg.HopfieldSecondParallelSolver import \
     HopfieldSecondParallelSolver
@@ -62,6 +65,8 @@ def get_data_path(key, problem_family):
         resources_dir = os.path.join(base_dir, 'resources/KCP')
     elif problem_family == "3":
         resources_dir = os.path.join(base_dir, 'resources/CKMP')
+    elif problem_family == "4":
+        resources_dir = os.path.join(base_dir, 'resources/KF')
     else:
         raise ValueError(f"Invalid problem_family: {problem_family}")
     paths_file = os.path.join(resources_dir, 'paths.txt')
@@ -275,6 +280,69 @@ def load_problems(dataset_path, dataset_key, use_gpu, problem_family):
                 except Exception as e:
                     print(f"⚠️ Failed to read {file_path}: {e}")
             return problems
+        
+    elif problem_family == "4":
+        # K-Center Problem
+        if dataset_key in ["1", "2", "3"]:
+            # Nested coordinate datasets
+            problems = {}
+
+            for subdir in sorted(os.listdir(dataset_path)):
+                subdir_path = os.path.join(dataset_path, subdir)
+                if not os.path.isdir(subdir_path):
+                    continue
+
+                problems[subdir] = []
+                for filename in os.listdir(subdir_path):
+                    if not filename.endswith(".json"):
+                        continue
+                    file_path = os.path.join(subdir_path, filename)
+                    try:
+                        reader = KFJSONCoordinateReader()
+                        if reader.canRead(file_path):
+                            problem = reader.parse(file_path, use_gpu)
+                            problems[subdir].append(problem)
+                        else:
+                            print(f"⚠️ Skipped {file_path}: cannot read")
+                    except Exception as e:
+                        print(f"⚠️ Failed to read {file_path}: {e}")
+            return problems
+        elif dataset_key in ["4", "6"]:
+            # Flat distance datasets
+            problems = []
+
+            for filename in sorted(os.listdir(dataset_path)):
+                if not filename.endswith(".json"):
+                    continue
+                file_path = os.path.join(dataset_path, filename)
+                try:
+                    reader = KFJSONDistanceReader()
+                    if reader.canRead(file_path):
+                        problem = reader.parse(file_path, use_gpu)
+                        problems.append(problem)
+                    else:
+                        print(f"⚠️ Skipped {file_path}: cannot read")
+                except Exception as e:
+                    print(f"⚠️ Failed to read {file_path}: {e}")
+            return problems
+        elif dataset_key in ["5"]:
+            # Flat coordinate datasets
+            problems = []
+
+            for filename in sorted(os.listdir(dataset_path)):
+                if not filename.endswith(".json"):
+                    continue
+                file_path = os.path.join(dataset_path, filename)
+                try:
+                    reader = CKMPJSONCoordinateReader()
+                    if reader.canRead(file_path):
+                        problem = reader.parse(file_path, use_gpu)
+                        problems.append(problem)
+                    else:
+                        print(f"⚠️ Skipped {file_path}: cannot read")
+                except Exception as e:
+                    print(f"⚠️ Failed to read {file_path}: {e}")
+            return problems
 
 # -------------------------------
 # 🔹 Main script
@@ -379,6 +447,11 @@ if __name__ == '__main__':
                     solver = HopfieldOriginal2nkCKMPSolver(use_gpu=args["use_gpu"])
                 case "2":
                     solver = HopfieldParallelCKMSolver(use_gpu=args["use_gpu"])
+
+        case "4":
+            match args['algorithm']:
+                case "1":
+                    solver = HopfieldParallelKFSolver(use_gpu=args["use_gpu"])
 
     problem_family = args["problem_family"]
 

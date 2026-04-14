@@ -91,6 +91,44 @@ def calculate_distance(graph, facilities, n=None):
     return float(torch.sum(min_values))
 
 
+def calculate_distance_with_facility_cost(graph, facilities, facility_costs, n=None):
+    """
+    Compute the k-facility-location objective:
+    sum of client-to-nearest-facility distances plus the opening cost
+    of the selected facilities.
+
+    Parameters
+    ----------
+    graph : object
+        Graph-like object containing `graph._distances`.
+    facilities : list or tensor
+        Indices of the selected facilities.
+    facility_costs : list, tensor, or dict
+        Opening cost for each facility index.
+    n : unused
+        Kept only for consistency with the other helper functions.
+    """
+    if len(facilities) == 0:
+        raise ValueError("facilities must contain at least one selected facility.")
+
+    # Distance part: each client is assigned to its nearest selected facility.
+    distance_sub_graph = graph._distances[facilities]
+    min_values, _ = torch.min(distance_sub_graph, dim=0)
+    assignment_cost = float(torch.sum(min_values))
+
+    # Facility opening cost part.
+    if isinstance(facility_costs, dict):
+        opening_cost = float(sum(facility_costs[int(f)] for f in facilities))
+    else:
+        opening_cost = 0.0
+        for f in facilities:
+            if isinstance(facility_costs, torch.Tensor):
+                opening_cost += float(facility_costs[int(f)].item())
+            else:
+                opening_cost += float(facility_costs[int(f)])
+
+    return assignment_cost + opening_cost
+
 def calculate_capacitated_distance(graph, client_activation_values, active_facility_list):
     """
     Compute capacitated k-median cost using the actual client-to-cluster assignment.

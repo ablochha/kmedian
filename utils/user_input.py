@@ -15,8 +15,9 @@ def get_problem_family():
     print("\t1: K-Median Problem (KMP)")
     print("\t2: K-Center Problem (KCP)")
     print("\t3: Capacitated K-Median Problem (CKMP)")
+    print("\t4: K-Facility Location Problem (KFLP)")
 
-    return input("Enter a value 1-3: ")
+    return input("Enter a value 1-4: ")
 
 
 def get_algorithm():
@@ -58,6 +59,10 @@ def get_algorithm():
         print("\t1: 2nk Original Single Hopfield Capacitated K-median")
         print("\t2: Parallel Hopfield Capacitated K-median")
         return input("Enter a value 1-2: ")
+    
+    elif args["problem_family"] == "4":
+        print("\t1: Parallel Hopfield K-Facility Location")
+        return input("Enter a value 1: ")
     
     else:
         print("Invalid problem family selection.")
@@ -354,6 +359,16 @@ def get_parameters(algorithm_selection):
                 parameters["runs"] = int(input_runs)
             return parameters
         if algorithm_selection == "2":
+            input_runs = input("\nEnter Number of Runs (Default is 1): ")
+            if len(input_runs) == 0:
+                print("Using default: 1 run")
+                parameters["runs"] = 1
+            else:
+                parameters["runs"] = int(input_runs)
+            return parameters
+        
+    elif args["problem_family"] == "4":
+        if algorithm_selection == "1":
             input_runs = input("\nEnter Number of Runs (Default is 1): ")
             if len(input_runs) == 0:
                 print("Using default: 1 run")

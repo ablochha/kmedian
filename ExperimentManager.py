@@ -5,13 +5,14 @@ import time
 
 import numpy as np
 
-from solvers.brute_solver import calculate_distance, calculate_radius
+from solvers.brute_solver import calculate_distance, calculate_radius, calculate_distance_with_facility_cost, calculate_capacitated_distance
 from solvers_alg.AryaMultiSolver import AryaMultiSolver
 from solvers_alg.CohenAddadMultiSolver import CohenAddadMultiSolver
 from solvers_alg.CohenAddadSolver import CohenAddadSolver
 from solvers_alg.DominguezAlgorithmSolver import DominguezAlgorithmSolver
 from solvers_alg.DropWorstFacilityKCenterSolver import \
     DropWorstFacilityKCenterSolver
+from solvers_alg.HopfieldParallelKFSolver import HopfieldParallelKFSolver
 from solvers_alg.FarthestClientReassignmentKCenterSolver import \
     FarthestClientReassignmentKCenterSolver
 from solvers_alg.FarthestFirstKCenterSolver import FarthestFirstKCenterSolver
@@ -190,10 +191,12 @@ class ExperimentManager():
                 end_time = time.time()
                 total_time = end_time - start_time
 
-                if self._problem_family == "1" or self._problem_family == "3":
+                if self._problem_family == "1":
                     distance = calculate_distance(problem.getGraph(), facilities, problem.getN())
                 elif self._problem_family == "2":
                     distance = calculate_radius(problem.getGraph(), facilities)
+                elif self._problem_family == "4":
+                    distance = calculate_distance_with_facility_cost(problem.getGraph(), facilities, problem.getFacilityCost(),  problem.getN())
                 else:
                     raise ValueError("Unknown problem family")
                 
